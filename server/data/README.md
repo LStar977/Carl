@@ -30,6 +30,29 @@ live-verified one-by-one. Expect some misses; they degrade gracefully. The
 ## Scaling to many thousands of companies
 
 This file is the on-ramp, not the ceiling. To reach 20k+ companies / 1M+
-postings, append a public ATS token crawl to the arrays here (same shape) and
-turn on the background worker (`INGEST_ENABLED=on`). See
-`docs/job-sources-and-coverage.md` → "Scaling to Indeed-class volume".
+postings, **import a public ATS token crawl** with the bundled importer — it
+merges into this file and de-dupes:
+
+```
+npm run import-boards -- <source-url-or-file> [greenhouse|lever|ashby] [--dry-run]
+```
+
+The importer accepts almost any shape — our `{greenhouse:[],lever:[],ashby:[]}`
+JSON, an array of `{ats, token}` objects, a bare token list (pass the provider),
+a CSV, or even raw text/HTML containing career-page URLs (it pulls tokens out of
+`greenhouse.io` / `lever.co` / `ashbyhq.com` links). Examples:
+
+```
+# a public crawl that already tags provider + token
+npm run import-boards -- https://example.com/ats-companies.json
+
+# a plain newline list of Greenhouse companies
+npm run import-boards -- ./greenhouse-companies.txt greenhouse
+
+# preview first
+npm run import-boards -- ./list.json --dry-run
+```
+
+Then turn on the background worker (`INGEST_ENABLED=on`) and validate live
+coverage with `npm run ingest`. See `docs/job-sources-and-coverage.md` →
+"Scaling to Indeed-class volume".

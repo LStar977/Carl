@@ -136,7 +136,10 @@ apply. Carl optimises for **appliable** jobs instead. Two levers:
    then serves from the index instantly, narrowed by title, with city/pay/work-
    style filtering in `scoreMatches`. Turn it on with `INGEST_ENABLED=on`
    (`INGEST_INTERVAL_MIN`, `INGEST_CONCURRENCY` tune it); validate a token list
-   with `npm run ingest`; `GET /health` reports the index size + age.
+   with `npm run ingest`; `GET /health` reports the index size + age. Grow the
+   token list from a public crawl with `npm run import-boards -- <url-or-file>`
+   (merges + de-dupes into `data/boards.json`; accepts JSON, CSV, bare lists, or
+   raw career-page URLs).
    **Postgres step:** the index lives in the store interface (`store.setJobIndex`/
    `getJobIndex`), so moving to a `jobs` table queried by `WHERE city/title/pay`
    is a store swap — the worker and search code don't change.
