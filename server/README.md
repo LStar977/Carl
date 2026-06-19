@@ -13,14 +13,18 @@ npm start                # http://localhost:8787
 npm run smoke            # end-to-end test of the whole flow
 ```
 
-It runs fully **without any API keys** using deterministic mock data, so the app
-is functional in development today. Add keys to `.env` to switch on real data:
+**Real job listings work with no API keys at all:** the default source is the
+free public ATS boards (Greenhouse/Lever/Ashby), read straight from their public
+feeds — see `src/data/boards.js` to grow the company list. If every source
+returns nothing, the backend falls back to deterministic mock data so the app is
+always functional. Add keys to `.env` to switch on the rest:
 
 | Key | Turns on |
 |-----|----------|
+| *(none)* `ATS_ENABLED=on` | **Free real listings** from public ATS boards — default, Greenhouse/Lever are also Tier-A auto-apply. |
 | `ANTHROPIC_API_KEY` | Real résumé parsing, fit scoring, and application drafting (Claude). |
-| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Real job discovery (Adzuna). |
-| `USAJOBS_API_KEY` | US federal listings (USAJOBS). |
+| `USAJOBS_API_KEY` | US federal listings (USAJOBS), free. |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | *Optional* extra discovery breadth (Adzuna; commercial agreement needed). |
 
 `APPLY_MODE=dry-run` (default) prepares and records applications but **never**
 submits to a real employer. Set `APPLY_MODE=live` only when you intend to submit
@@ -76,5 +80,7 @@ Tests: `npm test` (crypto verification with a synthetic chain + the full flow).
 ## Production TODO
 
 - Swap the in-memory store for Postgres.
-- Sign the Adzuna commercial agreement; add real ATS apply credentials.
+- Grow `src/data/boards.js` (free real listings); add real ATS apply
+  credentials for live Tier-A submission. Adzuna's commercial agreement is
+  optional breadth, not required.
 - Add auth (sign-in), rate limiting, and persistence for the apply queue/workers.

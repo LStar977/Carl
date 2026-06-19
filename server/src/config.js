@@ -28,6 +28,10 @@ export const config = {
   usajobsKey: process.env.USAJOBS_API_KEY || '',
   usajobsEmail: process.env.USAJOBS_EMAIL || '',
 
+  // Free public-ATS discovery (Greenhouse/Lever/Ashby boards). On by default —
+  // it needs no key and no commercial agreement. Set ATS_ENABLED=off to disable.
+  atsEnabled: (process.env.ATS_ENABLED || 'on').toLowerCase() !== 'off',
+
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),
 
@@ -45,3 +49,4 @@ function loadRootCert() {
 export const hasLLM = !!config.anthropicKey;
 export const hasAdzuna = !!(config.adzunaAppId && config.adzunaAppKey);
 export const hasUSAJobs = !!config.usajobsKey;
+export const hasATS = config.atsEnabled;

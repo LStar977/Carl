@@ -9,6 +9,6 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "smoke": "node test/smoke.mjs",
-    "test": "node test/appstore.test.mjs && node test/smoke.mjs"
+    "test": "node test/ats.test.mjs && node test/appstore.test.mjs && node test/smoke.mjs"
   }
 }

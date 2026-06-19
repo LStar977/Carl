@@ -17,7 +17,8 @@ spending nights filling out the same form 300 times.
   - [`how-carl-works.md`](docs/how-carl-works.md) — full product spec (journey,
     apply-engine tiers, architecture, monetization).
   - [`job-sources-and-coverage.md`](docs/job-sources-and-coverage.md) — job
-    sources (Adzuna, USAJOBS, Greenhouse, Lever) + US/Canada launch coverage.
+    sources (free public ATS boards, USAJOBS, optional Adzuna) + US/Canada
+    launch coverage.
   - [`claude-design-prompt.md`](docs/claude-design-prompt.md) — the Claude Design
     brief the screens were generated from.
   - [`launch-runbook.md`](docs/launch-runbook.md) — step-by-step path to ship

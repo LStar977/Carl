@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { config, hasLLM, hasAdzuna, hasUSAJobs } from './config.js';
+import { config, hasLLM, hasATS, hasAdzuna, hasUSAJobs } from './config.js';
 import { store } from './store.js';
 import { sendJSON, readBody, uid, nowISO } from './util.js';
 import { parseResume } from './services/resume.js';
@@ -32,7 +32,7 @@ const route = (method, pattern, handler) => routes.push({ method, pattern, handl
 
 route('GET', '/health', async () => ({
   status: 200,
-  body: { ok: true, integrations: { llm: hasLLM, adzuna: hasAdzuna, usajobs: hasUSAJobs }, applyMode: config.applyMode },
+  body: { ok: true, integrations: { llm: hasLLM, ats: hasATS, adzuna: hasAdzuna, usajobs: hasUSAJobs }, applyMode: config.applyMode },
 }));
 
 route('POST', '/v1/auth/anon', async () => {
@@ -241,5 +241,5 @@ function corsHeaders() {
 function publicUser(u) { return { id: u.id, name: u.name, email: u.email, credits: u.credits }; }
 
 server.listen(config.port, () => {
-  console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode}`);
+  console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode}`);
 });

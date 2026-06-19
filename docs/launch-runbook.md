@@ -16,33 +16,45 @@ real data, real money, real applications, and ship it.
 - [ ] **Apple Developer Program** membership ($99/yr) — you have this.
 - [ ] **Anthropic API** account (console.anthropic.com) — for résumé parsing,
       matching, and drafting.
-- [ ] **Adzuna developer** account + **commercial agreement** (job search).
-- [ ] **USAJOBS** API key (developer.usajobs.gov) — US federal listings.
+- [ ] **(Free, no account)** Public ATS boards (Greenhouse/Lever/Ashby) are the
+      default job source — real listings, no key, no agreement. Just grow the
+      company list in `server/src/data/boards.js`.
+- [ ] **USAJOBS** API key (developer.usajobs.gov) — US federal listings (free).
+- [ ] *(Optional)* **Adzuna developer** account + **commercial agreement** —
+      only for breadth beyond the seeded ATS boards; not a launch blocker.
 - [ ] A **hosting** provider for the backend (Render / Railway / Fly.io / a VPS).
 - [ ] A **Postgres** database (most hosts offer one-click).
 - [ ] A **domain** for the API (e.g. `api.carl.app`) — optional but recommended.
 
 ---
 
-## Phase 1 — Real data sources (API keys)
+## Phase 1 — Real data sources
 
-1. [ ] **Anthropic:** create an API key. Pick a model (default `claude-sonnet-4-6`).
-2. [ ] **Adzuna:** register an app for `app_id` + `app_key`, then **email Adzuna
-       to sign a commercial-use agreement** (the free tier is dev-only). This can
-       take time — start early.
+1. [ ] **Free ATS boards (real listings, $0):** already on by default
+       (`ATS_ENABLED=on`). Open `server/src/data/boards.js` and **expand the
+       company token list** — every US/CA company on Greenhouse/Lever/Ashby you
+       add yields more real listings, no key required. This alone gives the app
+       real jobs at launch.
+2. [ ] **Anthropic:** create an API key. Pick a model (default `claude-sonnet-4-6`;
+       `claude-haiku-4-5` is the cheaper drafting option).
 3. [ ] **USAJOBS:** request an API key (provide the contact email it asks for).
-4. [ ] Put them in `server/.env` (see `server/.env.example`):
+4. [ ] *(Optional)* **Adzuna:** register for `app_id` + `app_key`, then **email
+       Adzuna to sign a commercial-use agreement** (free tier is dev-only) — only
+       if you want listings beyond the seeded boards. Can take time; not required
+       to launch.
+5. [ ] Put what you have in `server/.env` (see `server/.env.example`):
    ```
    ANTHROPIC_API_KEY=...
-   ADZUNA_APP_ID=...        ADZUNA_APP_KEY=...
    USAJOBS_API_KEY=...      USAJOBS_EMAIL=you@example.com
+   # optional: ADZUNA_APP_ID=...   ADZUNA_APP_KEY=...
    ```
-5. [ ] Verify: `cd server && npm start`, hit `GET /health` — `integrations`
-       should show `llm/adzuna/usajobs: true`. Run a search and confirm real
-       listings come back.
+6. [ ] Verify: `cd server && npm start`, hit `GET /health` — `integrations`
+       should show `ats: true` (and `llm/usajobs: true` once keyed). Run a search
+       and confirm real listings come back from the ATS boards.
 
-> Until keys are present the backend serves deterministic mock data, so the app
-> keeps working — you can flip these on one at a time.
+> The free ATS boards need no keys, so real listings work out of the box. If a
+> source returns nothing (e.g. egress blocked, or a board closed), the backend
+> falls back to deterministic mock data so the app never breaks.
 
 ---
 
