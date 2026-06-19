@@ -133,7 +133,10 @@ struct QueueScreen: View {
                     Text("\(item.company) · \(item.detail)").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
                 }
                 Spacer(minLength: 6)
-                FitBadge(text: "\(item.fit)% fit")
+                VStack(alignment: .trailing, spacing: 6) {
+                    FitBadge(text: "\(item.fit)% fit")
+                    ApplyTierBadge(tier: item.tier)
+                }
             }
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").font(.system(size: 12, weight: .semibold)).foregroundStyle(CarlColor.royal)
@@ -170,7 +173,8 @@ struct QueueScreen: View {
                     if store.credits <= 0 { showPaywall = true }
                     else { Task { await store.confirm(item.matchId) } }
                 } label: {
-                    CarlButton(title: "Confirm & submit", trailingNote: "· 1 credit", height: 48, glow: false)
+                    CarlButton(title: item.tier == "A" ? "Confirm & submit" : "Review & send",
+                               trailingNote: "· 1 credit", height: 48, glow: false)
                         .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
                 }
                 .buttonStyle(.plain)
@@ -202,7 +206,10 @@ struct QueueScreen: View {
                     Text("\(item.company) · \(item.detail)").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
                 }
                 Spacer(minLength: 6)
-                FitBadge(text: "\(item.fit)% fit")
+                VStack(alignment: .trailing, spacing: 6) {
+                    FitBadge(text: "\(item.fit)% fit")
+                    ApplyTierBadge(tier: item.tier)
+                }
             }
             HStack {
                 HStack(spacing: 7) {

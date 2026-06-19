@@ -196,6 +196,24 @@ struct FitBadge: View {
     }
 }
 
+/// Shows how Carl will apply: `A` = auto-submitted via an official channel,
+/// anything else = Carl prepares it and you tap to send.
+struct ApplyTierBadge: View {
+    let tier: String
+    private var isAuto: Bool { tier == "A" }
+    private var tint: Color { isAuto ? CarlColor.royal : CarlColor.ashby }
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: isAuto ? "bolt.fill" : "hand.tap.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text(isAuto ? "Auto-apply" : "1-tap apply").carl(10.5, .bold)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 8).padding(.vertical, 4)
+        .background(tint.opacity(0.12), in: Capsule())
+    }
+}
+
 /// A speech bubble tail + card, used for Carl's chat messages.
 struct CarlSpeechCard<Content: View>: View {
     var background: Color = .white

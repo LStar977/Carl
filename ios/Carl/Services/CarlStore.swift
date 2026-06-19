@@ -163,7 +163,7 @@ final class CarlStore {
                   draft: Draft(coverNote: "Lumen's mission resonates with me…", answers: [])),
         QueueItem(matchId: "m3", applicationId: "a3", fit: 92, reasons: ["strong overlap"],
                   title: "Staff Product Designer", company: "Vela Robotics", detail: "Austin · $170–200k",
-                  letter: "V", avatarColor: "lever", tier: "A",
+                  letter: "V", avatarColor: "lever", tier: "B",
                   draft: Draft(coverNote: "Vela's robotics work is exciting…", answers: [])),
     ]
 }
