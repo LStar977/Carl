@@ -14,6 +14,11 @@ final class CarlStore {
     var dashboard: DashboardResponse?
     var busy = false
 
+    var booted = false
+    var connected = true
+    var loadingQueue = false
+    var loadingDashboard = false
+
     var prefs = JobPrefs(titles: ["Product Designer"], locationType: "remote",
                          location: nil, country: "us", payFloor: 120, workType: "full-time")
 
@@ -26,9 +31,22 @@ final class CarlStore {
     // MARK: Onboarding
 
     func boot() async {
-        _ = try? await api.authAnon()
+        do {
+            _ = try await api.authAnon()
+            connected = true
+        } catch {
+            connected = false
+            booted = true
+            return
+        }
         await refreshCredits()
         await storeKit.load()
+        booted = true
+    }
+
+    func retry() async {
+        booted = false
+        await boot()
     }
 
     func savePreferences() async { try? await api.updatePrefs(prefs) }
@@ -53,17 +71,23 @@ final class CarlStore {
             _ = try? await api.purchase(packId: packId)
         }
         await refreshCredits()
+        Haptics.success()
         return true
     }
 
     // MARK: Main app
 
     func loadQueue() async {
+        loadingQueue = true
         if let q = try? await api.queue() { queue = q.items; credits = q.credits }
+        loadingQueue = false
     }
 
     func confirm(_ matchId: String) async {
-        if let r = try? await api.confirm(matchId: matchId), let c = r.credits { credits = c }
+        if let r = try? await api.confirm(matchId: matchId) {
+            if let c = r.credits { credits = c }
+            if r.submitted { Haptics.success() }
+        }
         await loadQueue()
         await loadDashboard()
     }
@@ -77,8 +101,10 @@ final class CarlStore {
     }
 
     func loadDashboard() async {
+        loadingDashboard = true
         dashboard = try? await api.dashboard()
         if let c = dashboard?.credits { credits = c }
+        loadingDashboard = false
     }
 
     func refreshCredits() async {

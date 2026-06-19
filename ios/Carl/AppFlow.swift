@@ -10,14 +10,56 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if signedIn {
+            if !store.booted {
+                LaunchView()
+            } else if !store.connected {
+                ConnectionErrorView { Task { await store.retry() } }
+            } else if signedIn {
                 MainTabView()
             } else {
                 OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
             }
         }
         .environment(store)
-        .task { await store.boot() }
+        .task { if !store.booted { await store.boot() } }
+    }
+}
+
+/// Branded launch / loading state while the session boots.
+struct LaunchView: View {
+    var body: some View {
+        ZStack {
+            CarlColor.navy.ignoresSafeArea()
+            VStack(spacing: 24) {
+                CarlAvatar(showDashes: true).frame(width: 150, height: 142)
+                ProgressView().tint(.white)
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+/// Shown when the backend can't be reached, with a retry.
+struct ConnectionErrorView: View {
+    var retry: () -> Void
+    var body: some View {
+        ZStack {
+            CarlColor.screenBG.ignoresSafeArea()
+            VStack(spacing: 16) {
+                CarlAvatar(eyes: .open, floats: false).frame(width: 120, height: 114)
+                Text("Can't reach Carl").carl(22, .heavy).foregroundStyle(CarlColor.navy)
+                Text("Check that the Carl server is running, then try again.")
+                    .carl(15, .medium).foregroundStyle(CarlColor.textSoft)
+                    .multilineTextAlignment(.center)
+                Button(action: retry) {
+                    CarlButton(title: "Try again").frame(width: 220)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+            }
+            .padding(40)
+        }
+        .preferredColorScheme(.light)
     }
 }
 
@@ -180,6 +222,7 @@ struct ActivityScreen: View {
                     .padding(.horizontal, 22)
                     .padding(.bottom, 100)
                 }
+                .refreshable { await store.loadDashboard() }
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }

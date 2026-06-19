@@ -6,6 +6,7 @@ struct QueueScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.queue)
     var onOpenDetail: () -> Void = {}
     @Environment(CarlStore.self) private var store
+    @State private var showPaywall = false
 
     var body: some View {
         PhoneFrame(chrome: .dark) {
@@ -39,7 +40,7 @@ struct QueueScreen: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 13) {
                         if store.queue.isEmpty {
-                            emptyState
+                            if store.loadingQueue { loadingState } else { emptyState }
                         } else {
                             HStack(spacing: 10) {
                                 CarlMark(eyes: .happy).frame(width: 30, height: 29)
@@ -65,12 +66,14 @@ struct QueueScreen: View {
                     .padding(.horizontal, 22)
                     .padding(.bottom, 190)
                 }
+                .refreshable { await store.loadQueue() }
             }
             .overlay(alignment: .bottom) {
                 VStack(spacing: 0) {
                     if !store.queue.isEmpty {
                         Button {
-                            Task { await store.confirmAll() }
+                            if store.credits <= 0 { showPaywall = true }
+                            else { Task { await store.confirmAll() } }
                         } label: {
                             CarlButton(title: "Confirm all \(store.queue.count)",
                                        trailingNote: "· uses \(min(store.queue.count, store.credits)) credits",
@@ -89,6 +92,16 @@ struct QueueScreen: View {
             }
         }
         .task { await store.loadQueue() }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallScreen(onPurchase: { showPaywall = false })
+                .environment(store)
+        }
+    }
+
+    private var loadingState: some View {
+        ProgressView().tint(CarlColor.royal)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 90)
     }
 
     private var emptyState: some View {
@@ -154,7 +167,8 @@ struct QueueScreen: View {
                     .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.border, lineWidth: 1.5))
                 Button {
-                    Task { await store.confirm(item.matchId) }
+                    if store.credits <= 0 { showPaywall = true }
+                    else { Task { await store.confirm(item.matchId) } }
                 } label: {
                     CarlButton(title: "Confirm & submit", trailingNote: "· 1 credit", height: 48, glow: false)
                         .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
@@ -282,7 +296,9 @@ struct DashboardScreen: View {
                     .padding(.horizontal, 22)
                     .padding(.top, 64)
                     .padding(.bottom, 100)
+                    .redacted(reason: store.dashboard == nil ? .placeholder : [])
                 }
+                .refreshable { await store.loadDashboard() }
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
