@@ -56,10 +56,18 @@ setup. To use the real typeface:
 2. Register them under `UIAppFonts` in the target's Info settings.
 3. Set `CarlFont.usePlusJakarta = true` in `DesignSystem/Theme.swift`.
 
-## Status
+## Backend wiring
 
-This is the **UI layer** — faithful, navigable screens with sample data and
-animation (searching counters, scanning rings, shimmer, celebration). It is not
-yet wired to a backend. Next up (see `/docs`): resume parsing, the Adzuna/USAJOBS
-discovery adapters, the Greenhouse/Lever apply adapters, StoreKit credit packs,
-and real application tracking.
+The app talks to the `server/` backend through `Services/CarlAPI.swift`, driven
+by `Services/CarlStore.swift` (an `@Observable` injected into the app). Live:
+session + credits, preferences, **résumé upload** (Files/iCloud PDF or text, or a
+photo via on-device OCR — `Services/ResumeImport.swift`) → parse, search →
+reveal count, the drafted apply queue, confirm/submit (spends credits), and the
+dashboard/activity/settings counts.
+
+Point `CarlAPI.shared.baseURL` at your server (defaults to `http://localhost:8787`,
+which the simulator reaches as the Mac's localhost). With no API keys the backend
+serves mock data and apply runs in dry-run, so the whole flow works in dev.
+
+Remaining for production: API keys (Anthropic/Adzuna/USAJOBS), StoreKit purchases,
+a deployed host + database, and a deliberate switch to `APPLY_MODE=live`.

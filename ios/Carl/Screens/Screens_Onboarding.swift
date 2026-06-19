@@ -1,4 +1,7 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
+import UIKit
 
 // MARK: - 01 · Meet Carl
 
@@ -190,6 +193,11 @@ private struct Chip: View {
 
 struct ResumeUploadScreen: View {
     var onContinue: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+    @State private var showFileImporter = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var processing = false
+
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -198,32 +206,37 @@ struct ResumeUploadScreen: View {
                 CarlMessageRow(message: "Last thing — drop your resume so I know your superpowers.")
                     .padding(.bottom, 26)
 
-                // upload dropzone
-                VStack(spacing: 14) {
-                    Image(systemName: "arrow.up.to.line")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundStyle(CarlColor.royal)
-                        .frame(width: 62, height: 62)
-                        .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    Text("Upload from Files or iCloud").carl(18, .bold).foregroundStyle(CarlColor.navy)
-                    Text("PDF, DOC, or a clear photo").carl(13, .medium).foregroundStyle(CarlColor.textFaint)
+                // upload dropzone → Files / iCloud document picker
+                Button {
+                    showFileImporter = true
+                } label: {
+                    VStack(spacing: 14) {
+                        Image(systemName: "arrow.up.to.line")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(CarlColor.royal)
+                            .frame(width: 62, height: 62)
+                            .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        Text("Upload from Files or iCloud").carl(18, .bold).foregroundStyle(CarlColor.navy)
+                        Text("PDF or text file").carl(13, .medium).foregroundStyle(CarlColor.textFaint)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 34).padding(.horizontal, 24)
+                    .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [7, 6]))
+                            .foregroundStyle(Color(hex: 0xB9C5E0))
+                    )
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 34).padding(.horizontal, 24)
-                .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [7, 6]))
-                        .foregroundStyle(Color(hex: 0xB9C5E0))
-                )
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onContinue)
+                .buttonStyle(.plain)
                 .padding(.bottom, 18)
 
                 VStack(spacing: 12) {
-                    OptionRow(iconColor: CarlColor.navy, system: "camera",
-                              title: "Take a photo of it", subtitle: "Carl reads paper resumes too")
-                        .onTapGesture(perform: onContinue)
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        OptionRow(iconColor: CarlColor.navy, system: "camera",
+                                  title: "Take a photo of it", subtitle: "Carl reads paper resumes too")
+                    }
+                    .buttonStyle(.plain)
                     OptionRow(iconColor: CarlColor.royal, monogram: "in",
                               title: "Import from LinkedIn", subtitle: "Pull your profile in one tap")
                         .onTapGesture(perform: onContinue)
@@ -239,7 +252,52 @@ struct ResumeUploadScreen: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 78).padding(.bottom, 40)
+            .overlay {
+                if processing {
+                    ZStack {
+                        Color.black.opacity(0.06).ignoresSafeArea()
+                        VStack(spacing: 12) {
+                            ProgressView().tint(CarlColor.royal)
+                            Text("Reading your file…").carl(14, .semibold).foregroundStyle(CarlColor.navy)
+                        }
+                        .padding(24)
+                        .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .carlCardShadow(0.1, radius: 20)
+                    }
+                }
+            }
         }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .plainText, .text]) { result in
+            if case .success(let url) = result { handleFile(url) }
+        }
+        .onChange(of: photoItem) { _, item in handlePhoto(item) }
+    }
+
+    private func handleFile(_ url: URL) {
+        processing = true
+        Task {
+            let text = await ResumeImport.extractText(from: url)
+            finish(text)
+        }
+    }
+
+    private func handlePhoto(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        processing = true
+        Task {
+            var text = ""
+            if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                text = await ResumeImport.ocr(img)
+            }
+            finish(text)
+        }
+    }
+
+    private func finish(_ text: String) {
+        processing = false
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.resumeText = trimmed.isEmpty ? nil : trimmed
+        onContinue()
     }
 }
 

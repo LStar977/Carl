@@ -7,6 +7,7 @@ import Observation
 @Observable
 final class CarlStore {
     var credits = 3
+    var resumeText: String?
     var parsed: ParsedResume?
     var search: SearchResponse?
     var queue: [QueueItem] = []
@@ -31,7 +32,7 @@ final class CarlStore {
     func savePreferences() async { try? await api.updatePrefs(prefs) }
 
     func parseResume() async {
-        parsed = try? await api.parseResume(text: Self.sampleResume)
+        parsed = try? await api.parseResume(text: resumeText ?? Self.sampleResume)
     }
 
     func runSearch() async {
