@@ -110,6 +110,7 @@ struct ScreenGallery: View {
             .background(CarlColor.canvas)
             .navigationTitle("Carl")
         }
+        .environment(\.phoneFrameStyle, .mock)
     }
 
     private var header: some View {

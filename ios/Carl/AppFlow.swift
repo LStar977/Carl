@@ -25,23 +25,20 @@ struct OnboardingFlow: View {
     @State private var step = 0
 
     var body: some View {
-        ZStack {
-            CarlColor.canvas.ignoresSafeArea()
-            ScaledPhone {
-                switch step {
-                case 0: MeetCarlScreen(onStart: next)
-                case 1: InterviewScreen(onContinue: next)
-                case 2: ResumeUploadScreen(onContinue: next)
-                case 3: ReadingResumeScreen(onDone: next)
-                case 4: ConfirmScreen(onConfirm: next)
-                case 5: SearchingScreen(onDone: next)
-                case 6: RevealScreen(onUnlock: next)
-                default: PaywallScreen(onPurchase: onFinished)
-                }
+        Group {
+            switch step {
+            case 0: MeetCarlScreen(onStart: next)
+            case 1: InterviewScreen(onContinue: next)
+            case 2: ResumeUploadScreen(onContinue: next)
+            case 3: ReadingResumeScreen(onDone: next)
+            case 4: ConfirmScreen(onConfirm: next)
+            case 5: SearchingScreen(onDone: next)
+            case 6: RevealScreen(onUnlock: next)
+            default: PaywallScreen(onPurchase: onFinished)
             }
-            .id(step)
-            .transition(.opacity)
         }
+        .id(step)
+        .transition(.opacity)
     }
 
     private func next() { withAnimation(.easeInOut) { step += 1 } }
@@ -55,8 +52,7 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
-            CarlColor.canvas.ignoresSafeArea()
-            ScaledPhone {
+            Group {
                 switch tab {
                 case .home:     DashboardScreen(selectedTab: $tab, onOpenDetail: openDetail)
                 case .queue:    QueueScreen(selectedTab: $tab, onOpenDetail: openDetail)
@@ -65,14 +61,9 @@ struct MainTabView: View {
                 }
             }
             if showDetail {
-                ZStack {
-                    CarlColor.canvas.ignoresSafeArea()
-                    ScaledPhone {
-                        ApplicationDetailScreen(onBack: { withAnimation(.easeInOut) { showDetail = false } })
-                    }
-                }
-                .transition(.move(edge: .trailing))
-                .zIndex(1)
+                ApplicationDetailScreen(onBack: { withAnimation(.easeInOut) { showDetail = false } })
+                    .transition(.move(edge: .trailing))
+                    .zIndex(1)
             }
         }
     }

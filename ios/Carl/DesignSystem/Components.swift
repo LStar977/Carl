@@ -37,9 +37,28 @@ struct HomeIndicator: View {
     }
 }
 
-/// A 402×872 phone mockup with notch, status bar and home indicator. Screen
-/// content is laid out in a top-leading ZStack the size of the device.
+/// How a `PhoneFrame` renders: `.device` fills the real screen (the shipping
+/// app), `.mock` draws the 402×872 framed card with fake chrome (the gallery).
+enum PhoneFrameStyle { case device, mock }
+
+private struct PhoneFrameStyleKey: EnvironmentKey {
+    static let defaultValue: PhoneFrameStyle = .device
+}
+extension EnvironmentValues {
+    var phoneFrameStyle: PhoneFrameStyle {
+        get { self[PhoneFrameStyleKey.self] }
+        set { self[PhoneFrameStyleKey.self] = newValue }
+    }
+}
+
+/// A screen container. In `.device` mode it fills the real screen edge-to-edge
+/// and uses the OS status bar / safe areas; in `.mock` mode it renders the
+/// 402×872 design card with a drawn notch, status bar and home indicator.
+/// Screens are authored once and work in both modes — the fixed top/bottom
+/// paddings line up with the real status bar and home indicator.
 struct PhoneFrame<Background: View, Content: View>: View {
+    @Environment(\.phoneFrameStyle) private var frameStyle
+
     var chrome: StatusBarStyle = .dark
     var homeIndicatorLight: Bool = false
     var showStatusBar: Bool = true
@@ -59,6 +78,28 @@ struct PhoneFrame<Background: View, Content: View>: View {
     }
 
     var body: some View {
+        Group {
+            switch frameStyle {
+            case .device: deviceBody
+            case .mock:   mockBody
+            }
+        }
+    }
+
+    /// Full-screen: fills the device, lets the OS draw the status bar / home
+    /// indicator. `chrome` drives the status-bar color via the color scheme.
+    private var deviceBody: some View {
+        ZStack(alignment: .topLeading) {
+            background().frame(maxWidth: .infinity, maxHeight: .infinity)
+            content().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+        .preferredColorScheme(chrome == .light ? .dark : .light)
+    }
+
+    /// Design card: the 402×872 mockup with drawn chrome (gallery only).
+    private var mockBody: some View {
         ZStack(alignment: .topLeading) {
             background().frame(width: 402, height: 872)
             content().frame(width: 402, height: 872, alignment: .topLeading)
