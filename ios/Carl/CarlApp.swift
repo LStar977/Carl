@@ -4,7 +4,7 @@ import SwiftUI
 struct CarlApp: App {
     var body: some Scene {
         WindowGroup {
-            ScreenGallery()
+            RootView()
         }
     }
 }

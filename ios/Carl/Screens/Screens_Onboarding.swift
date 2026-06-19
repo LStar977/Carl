@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - 01 · Meet Carl
 
 struct MeetCarlScreen: View {
+    var onStart: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navy
@@ -45,7 +46,8 @@ struct MeetCarlScreen: View {
                     .padding(.horizontal, 32)
                     Spacer()
                     VStack(spacing: 16) {
-                        CarlButton(title: "Let's find me a job")
+                        Button(action: onStart) { CarlButton(title: "Let's find me a job") }
+                            .buttonStyle(.plain)
                         HStack(spacing: 5) {
                             Text("Already with Carl?").carl(14, .medium).foregroundStyle(.white.opacity(0.6))
                             Text("Log in").carl(14, .bold).foregroundStyle(.white)
@@ -68,6 +70,7 @@ struct MeetCarlScreen: View {
 // MARK: - 02 · Carl interviews you
 
 struct InterviewScreen: View {
+    var onContinue: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -131,6 +134,8 @@ struct InterviewScreen: View {
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(CarlColor.hairline, lineWidth: 1))
                 .carlCardShadow(0.08)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onContinue)
                 .padding(.horizontal, 22)
                 .padding(.bottom, 30)
             }
@@ -184,6 +189,7 @@ private struct Chip: View {
 // MARK: - 03 · Resume upload
 
 struct ResumeUploadScreen: View {
+    var onContinue: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -210,13 +216,17 @@ struct ResumeUploadScreen: View {
                         .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [7, 6]))
                         .foregroundStyle(Color(hex: 0xB9C5E0))
                 )
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onContinue)
                 .padding(.bottom, 18)
 
                 VStack(spacing: 12) {
                     OptionRow(iconColor: CarlColor.navy, system: "camera",
                               title: "Take a photo of it", subtitle: "Carl reads paper resumes too")
+                        .onTapGesture(perform: onContinue)
                     OptionRow(iconColor: CarlColor.royal, monogram: "in",
                               title: "Import from LinkedIn", subtitle: "Pull your profile in one tap")
+                        .onTapGesture(perform: onContinue)
                 }
 
                 Spacer()
@@ -267,6 +277,7 @@ private struct OptionRow: View {
 // MARK: - 04 · Carl reads your resume
 
 struct ReadingResumeScreen: View {
+    var onDone: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -294,6 +305,9 @@ struct ReadingResumeScreen: View {
             }
             .padding(.horizontal, 36)
             .frame(maxHeight: .infinity)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { onDone() }
+            }
         }
     }
 }
@@ -318,6 +332,7 @@ private struct ShimmerLine: View {
 // MARK: - 05 · Confirm what Carl learned
 
 struct ConfirmScreen: View {
+    var onConfirm: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -369,7 +384,8 @@ struct ConfirmScreen: View {
 
                 Spacer()
                 VStack(spacing: 12) {
-                    CarlButton(title: "Yep, that's me — start searching")
+                    Button(action: onConfirm) { CarlButton(title: "Yep, that's me — start searching") }
+                        .buttonStyle(.plain)
                     CarlSecondaryButton(title: "Edit details")
                 }
             }

@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Paywall (selectable credit-pack stack)
 
 struct PaywallScreen: View {
+    var onPurchase: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -46,7 +47,8 @@ struct PaywallScreen: View {
                 .padding(.top, 14)
 
                 Spacer()
-                CarlButton(title: "Get 110 credits — $59")
+                Button(action: onPurchase) { CarlButton(title: "Get 110 credits — $59") }
+                    .buttonStyle(.plain)
                     .padding(.bottom, 12)
                 TrustRow(items: [("lock.fill", "Secure payment"), ("checkmark.shield.fill", "Cancel anytime"), ("checkmark", "No expiry")])
             }

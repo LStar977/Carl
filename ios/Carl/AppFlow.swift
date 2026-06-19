@@ -1,0 +1,181 @@
+import SwiftUI
+
+/// Tabs in the main app shell.
+enum CarlTab { case home, queue, activity, profile }
+
+/// App entry point once we want the real, navigable experience (not the gallery).
+/// Boots into onboarding, then drops into the main tab shell after the paywall.
+struct RootView: View {
+    @State private var signedIn = false
+    var body: some View {
+        Group {
+            if signedIn {
+                MainTabView()
+            } else {
+                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
+            }
+        }
+    }
+}
+
+// MARK: - Onboarding flow
+
+struct OnboardingFlow: View {
+    var onFinished: () -> Void
+    @State private var step = 0
+
+    var body: some View {
+        ZStack {
+            CarlColor.canvas.ignoresSafeArea()
+            ScaledPhone {
+                switch step {
+                case 0: MeetCarlScreen(onStart: next)
+                case 1: InterviewScreen(onContinue: next)
+                case 2: ResumeUploadScreen(onContinue: next)
+                case 3: ReadingResumeScreen(onDone: next)
+                case 4: ConfirmScreen(onConfirm: next)
+                case 5: SearchingScreen(onDone: next)
+                case 6: RevealScreen(onUnlock: next)
+                default: PaywallScreen(onPurchase: onFinished)
+                }
+            }
+            .id(step)
+            .transition(.opacity)
+        }
+    }
+
+    private func next() { withAnimation(.easeInOut) { step += 1 } }
+}
+
+// MARK: - Main tab shell
+
+struct MainTabView: View {
+    @State private var tab: CarlTab = .home
+    @State private var showDetail = false
+
+    var body: some View {
+        ZStack {
+            CarlColor.canvas.ignoresSafeArea()
+            ScaledPhone {
+                switch tab {
+                case .home:     DashboardScreen(selectedTab: $tab, onOpenDetail: openDetail)
+                case .queue:    QueueScreen(selectedTab: $tab, onOpenDetail: openDetail)
+                case .activity: ActivityScreen(selectedTab: $tab, onOpenDetail: openDetail)
+                case .profile:  SettingsScreen(selectedTab: $tab)
+                }
+            }
+            if showDetail {
+                ZStack {
+                    CarlColor.canvas.ignoresSafeArea()
+                    ScaledPhone {
+                        ApplicationDetailScreen(onBack: { withAnimation(.easeInOut) { showDetail = false } })
+                    }
+                }
+                .transition(.move(edge: .trailing))
+                .zIndex(1)
+            }
+        }
+    }
+
+    private func openDetail() { withAnimation(.easeInOut) { showDetail = true } }
+}
+
+// MARK: - Shared functional tab bar
+
+struct CarlTabBar: View {
+    @Binding var selected: CarlTab
+    var body: some View {
+        HStack {
+            item(.home, "house.fill", "Home")
+            Spacer()
+            item(.queue, "tray.fill", "Queue", badge: "14")
+            Spacer()
+            item(.activity, "chart.line.uptrend.xyaxis", "Activity")
+            Spacer()
+            item(.profile, "person", "Profile")
+        }
+        .padding(.horizontal, 30)
+        .padding(.top, 12)
+        .frame(height: 84, alignment: .top)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.94))
+        .overlay(alignment: .top) { Rectangle().fill(CarlColor.hairline).frame(height: 1) }
+    }
+
+    private func item(_ t: CarlTab, _ icon: String, _ label: String, badge: String? = nil) -> some View {
+        let active = selected == t
+        return Button {
+            selected = t
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 20, weight: .regular))
+                    .overlay(alignment: .topTrailing) {
+                        if let badge {
+                            Text(badge).carl(10, .heavy).foregroundStyle(.white)
+                                .padding(.horizontal, 4).frame(minWidth: 16, minHeight: 16)
+                                .background(CarlColor.red, in: Capsule())
+                                .offset(x: 12, y: -8)
+                        }
+                    }
+                Text(label).carl(10.5, active ? .bold : .semibold)
+            }
+            .foregroundStyle(active ? CarlColor.royal : CarlColor.textGhost)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Activity tab
+
+struct ActivityScreen: View {
+    var selectedTab: Binding<CarlTab> = .constant(.activity)
+    var onOpenDetail: () -> Void = {}
+
+    private struct Item { let dot: Color; let text: String; let time: String }
+    private let items: [Item] = [
+        Item(dot: CarlColor.green, text: "Acme replied to your application", time: "1h"),
+        Item(dot: CarlColor.royal, text: "Northwind viewed your application", time: "2h"),
+        Item(dot: CarlColor.royal, text: "Applied to Senior Designer · Acme", time: "2h"),
+        Item(dot: CarlColor.royal, text: "Applied to Product Designer · Lumen", time: "3h"),
+        Item(dot: CarlColor.green, text: "Interview scheduled · Vela Robotics", time: "5h"),
+        Item(dot: CarlColor.royal, text: "Applied to Staff Designer · Vela", time: "6h")
+    ]
+
+    var body: some View {
+        PhoneFrame(chrome: .dark) {
+            CarlColor.screenBG
+        } content: {
+            VStack(spacing: 0) {
+                Text("Activity").carl(26, .heavy).foregroundStyle(CarlColor.navy)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 22).padding(.top, 64).padding(.bottom, 12)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                            Button(action: onOpenDetail) {
+                                HStack(spacing: 12) {
+                                    Circle().fill(item.dot).frame(width: 8, height: 8)
+                                    Text(item.text).carl(13.5, .semibold).foregroundStyle(CarlColor.navy)
+                                    Spacer()
+                                    Text(item.time).carl(11.5, .semibold).foregroundStyle(CarlColor.textGhost)
+                                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color(hex: 0xC2C9D6))
+                                }
+                                .padding(.vertical, 14)
+                            }
+                            .buttonStyle(.plain)
+                            if idx < items.count - 1 { Divider().overlay(CarlColor.hairline) }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .carlCardShadow(0.05, radius: 12)
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 100)
+                }
+            }
+            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab) }
+        }
+    }
+}

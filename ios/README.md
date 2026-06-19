@@ -9,9 +9,15 @@ Plus Jakarta Sans, and the briefcase-in-magnifier Carl mark.
 1. Open `ios/Carl.xcodeproj` in **Xcode 16+** (the project uses filesystem-
    synchronized groups, so new files added to `Carl/` are picked up automatically).
 2. Select an iPhone simulator and hit **Run**.
-3. The app launches into a **Screen Gallery** — every screen grouped by section,
-   plus a swipeable **Hero Flow** (Welcome → Interview → Searching → Reveal →
-   Paywall → Queue → Dashboard).
+3. The app boots into the **navigable flow**: Meet Carl → Interview → Resume →
+   (Carl reads it) → Confirm → Searching → Reveal → Paywall. After the paywall it
+   drops into the main app with a live tab bar (Home / Queue / Activity / Profile)
+   and a pushable application-detail screen.
+
+The "reading resume" and "searching" steps auto-advance after a beat; every other
+step advances on its primary button. `ScreenGallery.swift` is still in the project
+as a design reference (set `RootView()` → `ScreenGallery()` in `CarlApp.swift` to
+browse all screens individually).
 
 Requires iOS 17+. No third-party dependencies.
 
@@ -19,7 +25,9 @@ Requires iOS 17+. No third-party dependencies.
 
 ```
 Carl/
-  CarlApp.swift            App entry → ScreenGallery
+  CarlApp.swift            App entry → RootView
+  AppFlow.swift            RootView, OnboardingFlow, MainTabView, tab bar, Activity
+  ScreenGallery.swift      Design reference: every screen, individually browsable
   Models.swift             JobMatch + sample data
   ScreenGallery.swift      Browsable index of all screens + Hero Flow
   DesignSystem/

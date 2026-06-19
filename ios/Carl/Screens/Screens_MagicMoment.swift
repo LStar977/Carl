@@ -25,6 +25,7 @@ struct MatchCard: View {
 // MARK: - Carl is searching (immersive)
 
 struct SearchingScreen: View {
+    var onDone: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navyDeep
@@ -62,6 +63,9 @@ struct SearchingScreen: View {
             }
             .padding(.horizontal, 28)
             .padding(.top, 84).padding(.bottom, 40)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onDone() }
+            }
         }
     }
 
@@ -88,6 +92,7 @@ struct SearchingScreen: View {
 // MARK: - The reveal (immersive navy)
 
 struct RevealScreen: View {
+    var onUnlock: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navy
@@ -120,7 +125,10 @@ struct RevealScreen: View {
                 VStack(spacing: 14) {
                     Text("+ 309 more great-fit matches waiting")
                         .carl(13, .semibold).foregroundStyle(CarlColor.textOnNavyMuted)
-                    CarlButton(title: "Unlock all 312 matches", systemIcon: "lock.fill")
+                    Button(action: onUnlock) {
+                        CarlButton(title: "Unlock all 312 matches", systemIcon: "lock.fill")
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)

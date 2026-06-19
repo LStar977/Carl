@@ -3,6 +3,8 @@ import SwiftUI
 // MARK: - 13 · Review & apply queue
 
 struct QueueScreen: View {
+    var selectedTab: Binding<CarlTab> = .constant(.queue)
+    var onOpenDetail: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -46,21 +48,28 @@ struct QueueScreen: View {
 
                         expandedCard
                         collapsedCard
+                            .contentShape(Rectangle())
+                            .onTapGesture(perform: onOpenDetail)
                         fadedCard
+                            .contentShape(Rectangle())
+                            .onTapGesture(perform: onOpenDetail)
                     }
                     .padding(.horizontal, 22)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 190)
                 }
             }
             .overlay(alignment: .bottom) {
-                CarlButton(title: "Confirm all 14", trailingNote: "· uses 14 credits",
-                           fill: CarlColor.navy, height: 54, glow: false)
-                    .shadow(color: CarlColor.navy.opacity(0.26), radius: 10, y: 10)
-                    .padding(.horizontal, 22).padding(.bottom, 30).padding(.top, 14)
-                    .background(alignment: .bottom) {
-                        LinearGradient(colors: [CarlColor.screenBG.opacity(0), CarlColor.screenBG],
-                                       startPoint: .top, endPoint: .bottom)
-                    }
+                VStack(spacing: 0) {
+                    CarlButton(title: "Confirm all 14", trailingNote: "· uses 14 credits",
+                               fill: CarlColor.navy, height: 54, glow: false)
+                        .shadow(color: CarlColor.navy.opacity(0.26), radius: 10, y: 10)
+                        .padding(.horizontal, 22).padding(.bottom, 12).padding(.top, 14)
+                        .background(alignment: .bottom) {
+                            LinearGradient(colors: [CarlColor.screenBG.opacity(0), CarlColor.screenBG],
+                                           startPoint: .top, endPoint: .bottom)
+                        }
+                    CarlTabBar(selected: selectedTab)
+                }
             }
         }
     }
@@ -182,6 +191,8 @@ struct QueueScreen: View {
 // MARK: - 14 · Dashboard / progress
 
 struct DashboardScreen: View {
+    var selectedTab: Binding<CarlTab> = .constant(.home)
+    var onOpenDetail: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -244,13 +255,15 @@ struct DashboardScreen: View {
                         .padding(.horizontal, 16)
                         .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .carlCardShadow(0.05, radius: 12)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onOpenDetail)
                     }
                     .padding(.horizontal, 22)
                     .padding(.top, 64)
                     .padding(.bottom, 100)
                 }
             }
-            .overlay(alignment: .bottom) { tabBar }
+            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab) }
         }
     }
 
@@ -274,45 +287,12 @@ struct DashboardScreen: View {
         }
         .padding(.vertical, 12)
     }
-
-    private var tabBar: some View {
-        HStack {
-            tabItem("house.fill", "Home", active: true)
-            Spacer()
-            tabItem("tray.fill", "Queue", active: false, badge: "14")
-            Spacer()
-            tabItem("chart.line.uptrend.xyaxis", "Activity", active: false)
-            Spacer()
-            tabItem("person", "Profile", active: false)
-        }
-        .padding(.horizontal, 30)
-        .padding(.top, 12)
-        .frame(height: 84, alignment: .top)
-        .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.94))
-        .overlay(alignment: .top) { Rectangle().fill(CarlColor.hairline).frame(height: 1) }
-    }
-
-    private func tabItem(_ icon: String, _ label: String, active: Bool, badge: String? = nil) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 20, weight: .regular))
-                .overlay(alignment: .topTrailing) {
-                    if let badge {
-                        Text(badge).carl(10, .heavy).foregroundStyle(.white)
-                            .padding(.horizontal, 4).frame(minWidth: 16, minHeight: 16)
-                            .background(CarlColor.red, in: Capsule())
-                            .offset(x: 12, y: -8)
-                    }
-                }
-            Text(label).carl(10.5, active ? .bold : .semibold)
-        }
-        .foregroundStyle(active ? CarlColor.royal : CarlColor.textGhost)
-    }
 }
 
 // MARK: - 15 · Application detail / tracking
 
 struct ApplicationDetailScreen: View {
+    var onBack: () -> Void = {}
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -384,8 +364,13 @@ struct ApplicationDetailScreen: View {
                 .padding(.top, 96).padding(.bottom, 40)
             }
             .overlay(alignment: .topLeading) {
-                Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).foregroundStyle(CarlColor.navy)
-                    .padding(.top, 60).padding(.leading, 22)
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).foregroundStyle(CarlColor.navy)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 50).padding(.leading, 14)
             }
         }
     }
@@ -436,6 +421,7 @@ struct ApplicationDetailScreen: View {
 // MARK: - 16 · Settings / profile
 
 struct SettingsScreen: View {
+    var selectedTab: Binding<CarlTab> = .constant(.profile)
     @State private var carlTalks = true
     var body: some View {
         PhoneFrame(chrome: .dark) {
@@ -505,8 +491,9 @@ struct SettingsScreen: View {
                     }
                 }
                 .padding(.horizontal, 18)
-                .padding(.top, 74).padding(.bottom, 30)
+                .padding(.top, 74).padding(.bottom, 100)
             }
+            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab) }
         }
     }
 
