@@ -74,6 +74,26 @@ struct MeetCarlScreen: View {
 
 struct InterviewScreen: View {
     var onContinue: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+
+    private struct Msg: Identifiable { let id = UUID(); let text: String; let mine: Bool }
+    private enum Field { case work, location, area, pay, jobType }
+    private struct Question { let field: Field; let prompt: String; let chips: [String]; let placeholder: String? }
+
+    private let questions: [Question] = [
+        Question(field: .work, prompt: "What kind of work are you after?", chips: [], placeholder: "e.g. Product Designer"),
+        Question(field: .location, prompt: "Where do you want to work?", chips: ["Remote", "Hybrid", "On-site", "Open to relocating"], placeholder: nil),
+        Question(field: .area, prompt: "Which city or area?", chips: ["Remote — anywhere"], placeholder: "e.g. Toronto"),
+        Question(field: .pay, prompt: "What pay are you aiming for?", chips: ["$80k+", "$100k+", "$130k+", "$160k+", "$200k+"], placeholder: nil),
+        Question(field: .jobType, prompt: "And the job type?", chips: ["Full-time", "Part-time", "Contract"], placeholder: nil),
+    ]
+
+    @State private var step = 0
+    @State private var messages: [Msg] = []
+    @State private var draft = ""
+
+    private var current: Question? { step < questions.count ? questions[step] : nil }
+
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -82,20 +102,19 @@ struct InterviewScreen: View {
                 // header
                 VStack(spacing: 14) {
                     HStack(spacing: 12) {
-                        CarlMark()
-                            .frame(width: 34, height: 34)
-                            .background(CarlColor.navy, in: Circle())
+                        CarlMark().frame(width: 34, height: 34).background(CarlColor.navy, in: Circle())
                         VStack(alignment: .leading, spacing: 1) {
                             Text("Carl").carl(15, .bold).foregroundStyle(CarlColor.navy)
                             Text("Getting to know you").carl(12, .medium).foregroundStyle(CarlColor.textFaint)
                         }
                         Spacer()
-                        Text("3 of 8").carl(13, .bold).foregroundStyle(CarlColor.royal)
+                        Text("\(min(step + 1, questions.count)) of \(questions.count)").carl(13, .bold).foregroundStyle(CarlColor.royal)
                     }
                     GeometryReader { geo in
                         Capsule().fill(CarlColor.track)
                             .overlay(alignment: .leading) {
-                                Capsule().fill(CarlColor.royal).frame(width: geo.size.width * 0.38)
+                                Capsule().fill(CarlColor.royal)
+                                    .frame(width: geo.size.width * CGFloat(step) / CGFloat(questions.count))
                             }
                     }
                     .frame(height: 6)
@@ -104,45 +123,129 @@ struct InterviewScreen: View {
                 .padding(.top, 64)
 
                 // conversation
-                VStack(alignment: .leading, spacing: 14) {
-                    ChatBubble(text: "What kind of work are you after?", mine: false)
-                    ChatBubble(text: "Product Designer — mid to senior", mine: true)
-                    ChatBubble(text: "Love it — great field right now. Where do you want to work?", mine: false)
-                    VStack(alignment: .leading, spacing: 9) {
-                        HStack(spacing: 9) {
-                            Chip("Remote", selected: true)
-                            Chip("Hybrid")
-                            Chip("On-site")
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            ForEach(messages) { ChatBubble(text: $0.text, mine: $0.mine) }
+                            Color.clear.frame(height: 1).id("bottom")
                         }
-                        Chip("Open to relocating")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 22)
+                        .padding(.top, 18)
                     }
-                    .padding(.top, 2)
+                    .onChange(of: messages.count) { _, _ in
+                        withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 22)
-                .padding(.top, 18)
 
-                Spacer()
+                // input area for the current question
+                if let q = current {
+                    inputArea(for: q)
+                        .padding(.horizontal, 22)
+                        .padding(.bottom, 30)
+                }
+            }
+        }
+        .onAppear {
+            if messages.isEmpty { messages.append(Msg(text: questions[0].prompt, mine: false)) }
+        }
+    }
 
-                // input bar
+    @ViewBuilder
+    private func inputArea(for q: Question) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !q.chips.isEmpty {
+                FlowChips(q.chips) { answer($0) }
+            }
+            if let placeholder = q.placeholder {
                 HStack(spacing: 10) {
-                    Text("Or type your own…").carl(15, .medium).foregroundStyle(CarlColor.textGhost)
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
-                        .frame(width: 42, height: 42)
-                        .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    TextField(placeholder, text: $draft)
+                        .carlFont(15, .medium)
+                        .foregroundStyle(CarlColor.navy)
+                        .submitLabel(.send)
+                        .onSubmit { answer(draft) }
+                    Button {
+                        answer(draft)
+                    } label: {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
+                            .frame(width: 42, height: 42)
+                            .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.leading, 18).padding(6)
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(CarlColor.hairline, lineWidth: 1))
                 .carlCardShadow(0.08)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onContinue)
-                .padding(.horizontal, 22)
-                .padding(.bottom, 30)
             }
         }
+    }
+
+    private func answer(_ raw: String) {
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let q = current else { return }
+        apply(q.field, value)
+        if !value.isEmpty { messages.append(Msg(text: value, mine: true)) }
+        draft = ""
+        let nextStep = step + 1
+        step = nextStep
+        if nextStep < questions.count {
+            messages.append(Msg(text: questions[nextStep].prompt, mine: false))
+        } else {
+            Task { await store.savePreferences() }
+            onContinue()
+        }
+    }
+
+    private func apply(_ field: Field, _ value: String) {
+        switch field {
+        case .work:
+            if !value.isEmpty { store.prefs.titles = [value] }
+        case .location:
+            store.prefs.locationType = ["Remote": "remote", "Hybrid": "hybrid", "On-site": "onsite"][value] ?? "any"
+        case .area:
+            store.prefs.location = (value.isEmpty || value.hasPrefix("Remote")) ? nil : value
+        case .pay:
+            let digits = value.filter(\.isNumber)
+            if let n = Int(digits) { store.prefs.payFloor = n }
+        case .jobType:
+            store.prefs.workType = value.lowercased().replacingOccurrences(of: " ", with: "-")
+        }
+    }
+}
+
+/// A simple wrapping row of tappable chips.
+private struct FlowChips: View {
+    let labels: [String]
+    let onTap: (String) -> Void
+    init(_ labels: [String], onTap: @escaping (String) -> Void) { self.labels = labels; self.onTap = onTap }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(rows(), id: \.self) { row in
+                HStack(spacing: 9) {
+                    ForEach(row, id: \.self) { label in
+                        Button { onTap(label) } label: { Chip(label) }
+                            .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Greedy two/three-per-row wrap based on label length.
+    private func rows() -> [[String]] {
+        var out: [[String]] = []
+        var row: [String] = []
+        var width = 0
+        for label in labels {
+            let w = label.count + 6
+            if width + w > 34, !row.isEmpty { out.append(row); row = []; width = 0 }
+            row.append(label); width += w
+        }
+        if !row.isEmpty { out.append(row) }
+        return out
     }
 }
 

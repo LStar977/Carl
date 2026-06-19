@@ -32,7 +32,7 @@ struct OnboardingFlow: View {
         Group {
             switch step {
             case 0: MeetCarlScreen(onStart: next)
-            case 1: InterviewScreen(onContinue: { run { await store.savePreferences() } })
+            case 1: InterviewScreen(onContinue: next)
             case 2: ResumeUploadScreen(onContinue: { run { await store.parseResume() } })
             case 3: ReadingResumeScreen(onDone: next)
             case 4: ConfirmScreen(onConfirm: { run { await store.runSearch() } })
