@@ -70,4 +70,21 @@ const mixed = [...gh, ...lv, ...ab,
 const filtered = filterJobs(mixed, { titles: ['Product Designer'] });
 ok(filtered.length === 3, 'filter keeps the 3 designer roles, drops off-target + foreign');
 
+// --- City filtering (via match.scoreMatches) --------------------------------
+const { scoreMatches } = await import('../src/services/match.js');
+const cityJobs = [
+  { id: 'j1', title: 'Product Designer', location: 'Toronto, ON', remoteType: 'onsite', payFloor: 0 },
+  { id: 'j2', title: 'Product Designer', location: 'GTA', remoteType: 'onsite', payFloor: 0 },
+  { id: 'j3', title: 'Product Designer', location: 'Austin, TX', remoteType: 'onsite', payFloor: 0 },
+  { id: 'j4', title: 'Product Designer', location: 'Remote - Canada', remoteType: 'remote', payFloor: 0 },
+];
+const torontoOnsite = scoreMatches({}, { titles: ['Product Designer'], location: 'Toronto', locationType: 'onsite' }, cityJobs);
+ok(torontoOnsite.some((j) => j.id === 'j1'), 'onsite Toronto kept');
+ok(torontoOnsite.some((j) => j.id === 'j2'), 'GTA alias matches Toronto');
+ok(!torontoOnsite.some((j) => j.id === 'j3'), 'Austin onsite dropped for Toronto seeker');
+ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
+
+const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
+ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');
+
 console.log(`\nats.test: ${n} checks passed`);

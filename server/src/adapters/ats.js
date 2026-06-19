@@ -8,7 +8,9 @@
 import { fetchJSON, uid } from '../util.js';
 import { ATS_BOARDS } from '../data/boards.js';
 
-const PER_BOARD_CAP = 40; // keep one giant board from dominating the results
+const PER_BOARD_CAP = 100; // keep one giant board from dominating the results
+const CACHE_TTL_MS = 10 * 60 * 1000; // re-fetch a board at most every 10 min
+const boardCache = new Map(); // url -> { at, jobs }
 
 // Title words that describe seniority/structure, not the role itself.
 const STOP = new Set([
@@ -43,14 +45,19 @@ export async function searchATS(prefs, boards = ATS_BOARDS) {
 
 async function fetchBoard(provider, token) {
   const url = boardURL(provider, token);
+  const hit = boardCache.get(url);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.jobs;
+
   const { ok, json } = await fetchJSON(url);
-  if (!ok) return [];
+  if (!ok) return []; // don't cache failures — a board may just be slow right now
+  let jobs = [];
   try {
-    if (provider === 'greenhouse') return mapGreenhouse(token, json);
-    if (provider === 'lever') return mapLever(token, json);
-    if (provider === 'ashby') return mapAshby(token, json);
+    if (provider === 'greenhouse') jobs = mapGreenhouse(token, json);
+    else if (provider === 'lever') jobs = mapLever(token, json);
+    else if (provider === 'ashby') jobs = mapAshby(token, json);
   } catch { /* malformed board payload — skip */ }
-  return [];
+  boardCache.set(url, { at: Date.now(), jobs });
+  return jobs;
 }
 
 function boardURL(provider, token) {

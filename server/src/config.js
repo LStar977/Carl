@@ -31,6 +31,9 @@ export const config = {
   // Free public-ATS discovery (Greenhouse/Lever/Ashby boards). On by default —
   // it needs no key and no commercial agreement. Set ATS_ENABLED=off to disable.
   atsEnabled: (process.env.ATS_ENABLED || 'on').toLowerCase() !== 'off',
+  // Optional JSON file of extra board tokens to merge in (for scaling beyond the
+  // built-in seed list). See server/src/data/boards.js.
+  atsBoardsPath: process.env.ATS_BOARDS_PATH || '',
 
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),

@@ -19,12 +19,47 @@ export function scoreMatches(profile, prefs, jobs) {
 
 function isEligible(prefs, job, floor) {
   if (floor && job.payFloor && job.payFloor < floor) return false;
-  const want = prefs?.locationType; // remote | hybrid | onsite | any
-  if (want && want !== 'any' && job.remoteType && want !== job.remoteType) {
-    // allow remote jobs through for any preference; otherwise require a match
-    if (!(job.remoteType === 'remote')) return false;
-  }
+  if (!locationEligible(prefs, job)) return false;
   return true;
+}
+
+// Common metro aliases so "Toronto" matches "GTA", "San Francisco" matches "SF",
+// etc. Keys are lowercase city names; values are substrings to look for.
+const METRO_ALIASES = {
+  toronto: ['toronto', 'gta'],
+  vancouver: ['vancouver'],
+  montreal: ['montreal', 'montréal'],
+  ottawa: ['ottawa'],
+  calgary: ['calgary'],
+  'san francisco': ['san francisco', 'sf bay', 'bay area'],
+  'new york': ['new york', 'nyc', 'new york city'],
+  'los angeles': ['los angeles'],
+  seattle: ['seattle'],
+  austin: ['austin'],
+  boston: ['boston'],
+  chicago: ['chicago'],
+};
+
+/**
+ * City + work-style eligibility. Remote roles are always eligible (open
+ * regardless of the user's city). For onsite/hybrid seekers with a target city,
+ * the job's location must match that city (or one of its metro aliases).
+ */
+function locationEligible(prefs, job) {
+  const want = (prefs?.locationType || 'any').toLowerCase();
+  if (job.remoteType === 'remote') return true; // remote is open to any city
+  if (want === 'remote') return false;          // wants remote only → drop onsite
+
+  const city = (prefs?.location || '').split(',')[0].trim().toLowerCase();
+  if (!city) return true;                        // no city set → no city filter
+  const loc = (job.location || '').toLowerCase();
+  if (!loc) return false;                        // can't confirm an onsite role is in-city
+  return cityMatches(city, loc);
+}
+
+function cityMatches(city, loc) {
+  const aliases = METRO_ALIASES[city] || [city];
+  return aliases.some((a) => loc.includes(a));
 }
 
 function heuristicFit(parsed, wantTitle, job) {

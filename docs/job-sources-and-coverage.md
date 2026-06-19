@@ -119,6 +119,31 @@ that is fully one-tap auto, **not** whether Carl works in a market.
 > there is **no extra source to sign or build** to support Canada at launch, and
 > **nothing to pay**.
 
+## Scaling to Indeed-class volume
+
+Indeed (~30M+ listings) is built by crawling the whole web plus a large paid
+ingestion/sales operation. You can't reproduce that for free — and most of that
+count is duplicates, staffing-agency reposts, and jobs with no programmatic
+apply. Carl optimises for **appliable** jobs instead. Two levers:
+
+1. **Free, large, appliable index (recommended).** Public crawls of ATS tokens
+   cover **20,000+ companies / 1M+ live postings** across Greenhouse/Lever/Ashby.
+   Drop a token list at `ATS_BOARDS_PATH` (JSON: `{greenhouse:[],lever:[],ashby:[]}`)
+   and it merges with the built-in seed. **But you cannot live-fetch tens of
+   thousands of boards per search** — that needs a **background ingestion
+   worker**: a scheduled job crawls every board into Postgres (title, company,
+   **city**, pay, tier, apply ids), and user search queries the indexed table
+   instantly (filtered by city + title + pay). This is the real path to a big,
+   fast, city-accurate count. The current live-fetch path is correct for the
+   seeded starter list and degrades gracefully; ingestion is the scale upgrade.
+2. **Paid aggregator breadth.** Adzuna (or similar) already indexes Indeed-class
+   volume behind a commercial agreement — fastest way to a huge raw count, but it
+   costs money and those jobs are mostly Tier B (redirect, not auto-apply).
+
+City filtering already works across all sources (`services/match.js`): remote
+roles are always eligible; onsite/hybrid roles must match the user's city (with
+metro aliases, e.g. Toronto/GTA).
+
 ## Pre-launch to-dos this surfaces
 - **Grow the ATS token list** (`server/src/data/boards.js`) — the free,
   primary source. More US/CA company tokens = more real listings, zero cost.
