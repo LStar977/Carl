@@ -3,6 +3,9 @@
 > Carl is an AI with one job: to find you a job.
 > This document defines how the product works end-to-end so we can design the
 > screens (Claude Design) and then build it.
+>
+> **Locked decisions:** apply engine = **Assisted (Tier A + B) with a review
+> queue** for v1; monetization = **credit packs** (pay per application).
 
 ---
 
