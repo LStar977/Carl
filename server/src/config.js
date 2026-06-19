@@ -35,6 +35,13 @@ export const config = {
   // built-in seed list). See server/src/data/boards.js.
   atsBoardsPath: process.env.ATS_BOARDS_PATH || '',
 
+  // Background ingestion worker: crawl all boards into the index on a schedule so
+  // searches are instant and can scale to a huge token list. Off by default
+  // (small lists serve fine via live fetch); turn on in production.
+  ingestEnabled: (process.env.INGEST_ENABLED || 'off').toLowerCase() === 'on',
+  ingestIntervalMin: Number(process.env.INGEST_INTERVAL_MIN || 360),
+  ingestConcurrency: Number(process.env.INGEST_CONCURRENCY || 20),
+
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),
 

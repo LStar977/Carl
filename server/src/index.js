@@ -7,6 +7,7 @@ import { searchJobs } from './services/jobs.js';
 import { scoreMatches } from './services/match.js';
 import { classifyTier, draftApplication, submitApplication } from './services/apply.js';
 import { PACKS, balance, consume, purchase } from './services/credits.js';
+import { startIngestSchedule } from './services/ingest.js';
 
 // ----- DTO helpers -------------------------------------------------------
 
@@ -32,7 +33,12 @@ const route = (method, pattern, handler) => routes.push({ method, pattern, handl
 
 route('GET', '/health', async () => ({
   status: 200,
-  body: { ok: true, integrations: { llm: hasLLM, ats: hasATS, adzuna: hasAdzuna, usajobs: hasUSAJobs }, applyMode: config.applyMode },
+  body: {
+    ok: true,
+    integrations: { llm: hasLLM, ats: hasATS, adzuna: hasAdzuna, usajobs: hasUSAJobs },
+    applyMode: config.applyMode,
+    index: { enabled: config.ingestEnabled, ...store.getJobIndexMeta() },
+  },
 }));
 
 route('POST', '/v1/auth/anon', async () => {
@@ -241,5 +247,6 @@ function corsHeaders() {
 function publicUser(u) { return { id: u.id, name: u.name, email: u.email, credits: u.credits }; }
 
 server.listen(config.port, () => {
-  console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode}`);
+  console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode} ingest=${config.ingestEnabled}`);
+  startIngestSchedule();
 });

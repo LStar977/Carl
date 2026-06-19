@@ -43,6 +43,44 @@ export async function searchATS(prefs, boards = ATS_BOARDS) {
   return { jobs, sources: countBySource(jobs) };
 }
 
+/**
+ * Crawl EVERY seeded board (not filtered by a single user's prefs) for the
+ * ingestion worker. Runs a bounded concurrency pool so thousands of boards
+ * don't fire at once. Returns the de-duplicated, US/Canada-market job universe.
+ */
+export async function crawlAllBoards({ boards = ATS_BOARDS, concurrency = 20, onProgress } = {}) {
+  const targets = [];
+  for (const t of boards.greenhouse || []) targets.push(['greenhouse', t]);
+  for (const t of boards.lever || []) targets.push(['lever', t]);
+  for (const t of boards.ashby || []) targets.push(['ashby', t]);
+
+  const all = [];
+  let next = 0;
+  let done = 0;
+  async function worker() {
+    while (next < targets.length) {
+      const [provider, token] = targets[next++];
+      const jobs = await fetchBoard(provider, token);
+      for (const j of jobs) if (marketOk(j)) all.push(j);
+      if (onProgress) onProgress(++done, targets.length);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length || 1) }, worker));
+
+  const deduped = dedupeJobs(all);
+  return { jobs: deduped, sources: countBySource(deduped), boards: targets.length };
+}
+
+function dedupeJobs(jobs) {
+  const seen = new Set();
+  return jobs.filter((j) => {
+    const key = j.dedupeKey || `${j.company}|${j.title}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function fetchBoard(provider, token) {
   const url = boardURL(provider, token);
   const hit = boardCache.get(url);

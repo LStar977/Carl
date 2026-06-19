@@ -1,11 +1,22 @@
 // Job discovery: aggregate real sources when available, otherwise mock.
 import { hasATS, hasAdzuna, hasUSAJobs } from '../config.js';
-import { searchATS } from '../adapters/ats.js';
+import { searchATS, titleKeywords, titleMatches } from '../adapters/ats.js';
 import { searchAdzuna } from '../adapters/adzuna.js';
 import { searchUSAJobs } from '../adapters/usajobs.js';
 import { generateMockJobs, mockSourceCounts } from '../data/mock.js';
+import { store } from '../store.js';
 
 export async function searchJobs(prefs) {
+  // If the ingestion worker has populated the index, serve from it (fast, large).
+  // Narrow by title here so scoring stays bounded even at 1M+ indexed jobs; the
+  // full city/pay/work-style filtering happens in scoreMatches downstream.
+  const indexed = store.getJobIndex();
+  if (indexed.length) {
+    const kw = titleKeywords(prefs);
+    const jobs = indexed.filter((j) => titleMatches(j.title, kw));
+    return { jobs, sources: store.getJobIndexMeta().sources || [] };
+  }
+
   let jobs = [];
   const sources = [];
 

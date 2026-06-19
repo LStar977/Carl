@@ -10,6 +10,8 @@ const db = {
   activity: new Map(),     // userId -> Activity[] (newest first)
   tx: new Map(),           // userId -> Transaction[]
   usedTx: new Set(),       // consumed App Store transactionIds (replay guard)
+  jobIndex: [],            // global crawled job universe (ingestion worker)
+  jobIndexMeta: { at: null, count: 0, sources: [], ms: 0 },
 };
 
 export const store = {
@@ -71,4 +73,11 @@ export const store = {
     db.usedTx.add(txId);
     return true;
   },
+
+  // Global job index, populated by the ingestion worker. In Postgres this
+  // becomes a `jobs` table queried with a WHERE on city/title/pay; here the
+  // whole set is held in memory and filtered at query time.
+  setJobIndex(jobs, meta) { db.jobIndex = jobs; db.jobIndexMeta = meta; },
+  getJobIndex() { return db.jobIndex; },
+  getJobIndexMeta() { return db.jobIndexMeta; },
 };

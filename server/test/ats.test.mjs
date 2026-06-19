@@ -87,4 +87,23 @@ ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
 const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
 ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');
 
+// --- Ingestion index: searchJobs prefers the index when populated -----------
+const { store } = await import('../src/store.js');
+const { searchJobs } = await import('../src/services/jobs.js');
+
+const indexJobs = [
+  { id: 'i1', title: 'Senior Product Designer', company: 'Acme', location: 'Toronto, ON', remoteType: 'onsite', payFloor: 0, sourceName: 'Greenhouse' },
+  { id: 'i2', title: 'Backend Engineer', company: 'Acme', location: 'Toronto, ON', remoteType: 'onsite', payFloor: 0, sourceName: 'Greenhouse' },
+  { id: 'i3', title: 'Product Designer', company: 'Beta', location: 'Remote - Canada', remoteType: 'remote', payFloor: 0, sourceName: 'Lever' },
+];
+store.setJobIndex(indexJobs, { at: 'now', count: 3, sources: [{ name: 'Greenhouse', found: 2 }, { name: 'Lever', found: 1 }] });
+
+const res = await searchJobs({ titles: ['Product Designer'] });
+ok(res.jobs.length === 2, 'index serves only title-matching jobs (designer roles)');
+ok(res.jobs.every((j) => /designer/i.test(j.title)), 'backend engineer pre-filtered out of index results');
+ok(res.sources.some((s) => s.name === 'Greenhouse'), 'index reports its source breakdown');
+store.setJobIndex([], { at: null, count: 0, sources: [] }); // reset so we hit live/mock path
+const fallback = await searchJobs({ titles: ['Product Designer'] });
+ok(fallback.jobs.length > 0, 'empty index falls back to live/mock discovery');
+
 console.log(`\nats.test: ${n} checks passed`);

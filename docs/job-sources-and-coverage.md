@@ -126,16 +126,20 @@ ingestion/sales operation. You can't reproduce that for free — and most of tha
 count is duplicates, staffing-agency reposts, and jobs with no programmatic
 apply. Carl optimises for **appliable** jobs instead. Two levers:
 
-1. **Free, large, appliable index (recommended).** Public crawls of ATS tokens
-   cover **20,000+ companies / 1M+ live postings** across Greenhouse/Lever/Ashby.
-   Drop a token list at `ATS_BOARDS_PATH` (JSON: `{greenhouse:[],lever:[],ashby:[]}`)
-   and it merges with the built-in seed. **But you cannot live-fetch tens of
-   thousands of boards per search** — that needs a **background ingestion
-   worker**: a scheduled job crawls every board into Postgres (title, company,
-   **city**, pay, tier, apply ids), and user search queries the indexed table
-   instantly (filtered by city + title + pay). This is the real path to a big,
-   fast, city-accurate count. The current live-fetch path is correct for the
-   seeded starter list and degrades gracefully; ingestion is the scale upgrade.
+1. **Free, large, appliable index (recommended — and now built).** Public crawls
+   of ATS tokens cover **20,000+ companies / 1M+ live postings** across
+   Greenhouse/Lever/Ashby. Drop a token list at `ATS_BOARDS_PATH` (JSON:
+   `{greenhouse:[],lever:[],ashby:[]}`) and it merges with the built-in seed.
+   You **cannot** live-fetch tens of thousands of boards per search, so a
+   **background ingestion worker** (`server/src/services/ingest.js`) crawls every
+   board on a schedule (bounded concurrency) into the job index; `searchJobs`
+   then serves from the index instantly, narrowed by title, with city/pay/work-
+   style filtering in `scoreMatches`. Turn it on with `INGEST_ENABLED=on`
+   (`INGEST_INTERVAL_MIN`, `INGEST_CONCURRENCY` tune it); validate a token list
+   with `npm run ingest`; `GET /health` reports the index size + age.
+   **Postgres step:** the index lives in the store interface (`store.setJobIndex`/
+   `getJobIndex`), so moving to a `jobs` table queried by `WHERE city/title/pay`
+   is a store swap — the worker and search code don't change.
 2. **Paid aggregator breadth.** Adzuna (or similar) already indexes Indeed-class
    volume behind a commercial agreement — fastest way to a huge raw count, but it
    costs money and those jobs are mostly Tier B (redirect, not auto-apply).
