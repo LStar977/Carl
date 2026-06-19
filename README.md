@@ -20,6 +20,8 @@ spending nights filling out the same form 300 times.
     sources (Adzuna, USAJOBS, Greenhouse, Lever) + US/Canada launch coverage.
   - [`claude-design-prompt.md`](docs/claude-design-prompt.md) — the Claude Design
     brief the screens were generated from.
+  - [`launch-runbook.md`](docs/launch-runbook.md) — step-by-step path to ship
+    (keys, deploy, App Store Connect, IAPs, privacy, submission, go-live).
 
 ## Locked decisions (v1)
 
