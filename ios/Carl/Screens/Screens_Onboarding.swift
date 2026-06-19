@@ -298,6 +298,7 @@ struct ResumeUploadScreen: View {
     var onContinue: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var showFileImporter = false
+    @State private var showLinkedIn = false
     @State private var photoItem: PhotosPickerItem?
     @State private var processing = false
 
@@ -340,9 +341,11 @@ struct ResumeUploadScreen: View {
                                   title: "Take a photo of it", subtitle: "Carl reads paper resumes too")
                     }
                     .buttonStyle(.plain)
-                    OptionRow(iconColor: CarlColor.royal, monogram: "in",
-                              title: "Import from LinkedIn", subtitle: "Pull your profile in one tap")
-                        .onTapGesture(perform: onContinue)
+                    Button { showLinkedIn = true } label: {
+                        OptionRow(iconColor: CarlColor.royal, monogram: "in",
+                                  title: "Import from LinkedIn", subtitle: "Export your profile, Carl reads it")
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 Spacer()
@@ -374,6 +377,12 @@ struct ResumeUploadScreen: View {
             if case .success(let url) = result { handleFile(url) }
         }
         .onChange(of: photoItem) { _, item in handlePhoto(item) }
+        .sheet(isPresented: $showLinkedIn) {
+            LinkedInImportSheet(onText: { text in
+                showLinkedIn = false
+                finish(text)
+            })
+        }
     }
 
     private func handleFile(_ url: URL) {
