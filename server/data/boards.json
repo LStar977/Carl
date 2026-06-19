@@ -1,0 +1,49 @@
+{
+  "_comment": "Starter ATS board-token list for ATS_BOARDS_PATH. Merged with the built-in seed in src/data/boards.js. Toronto/Canada-heavy. Tokens are curated from known companies on each ATS, not live-verified — stale/closed boards fail gracefully (return nothing). Run `npm run ingest` to see which resolve and the real job counts. Grow this file freely; for true 20k-company scale, append a public ATS crawl.",
+  "greenhouse": [
+    "airbnb", "stripe", "dropbox", "robinhood", "coinbase", "databricks",
+    "instacart", "doordash", "gitlab", "reddit", "pinterest", "brex", "gusto",
+    "plaid", "asana", "figma", "discord", "twitch", "lyft", "cloudflare",
+    "samsara", "affirm", "sofi", "flexport", "benchling", "webflow", "datadog",
+    "mongodb", "twilio", "hashicorp", "confluent", "elastic", "snyk", "gong",
+    "lattice", "airtable", "calendly", "whatnot", "rippling", "scaleai",
+    "anduril", "niantic", "chime", "betterup", "retool", "grammarly",
+    "squarespace", "amplitude", "mixpanel", "checkr", "persona", "carta",
+    "pilot", "justworks", "marqeta", "sardine", "middesk", "socure", "alloy",
+    "lithic", "moderntreasury", "increase", "oscarhealth", "cityblock", "ro",
+    "hims", "cruise", "aurora", "appliedintuition", "figure", "peloton",
+    "warbyparker", "allbirds", "glossier", "chewy", "wayfair", "opendoor",
+    "compass", "gopuff", "gorgias", "klaviyo", "attentive", "braze", "iterable",
+    "sendbird", "vimeo", "datarobot", "sumologic", "newrelic", "pagerduty",
+    "fastly", "fivetran", "dbtlabs", "starburst", "hightouch", "census",
+    "airbyte", "temporal", "cockroachlabs", "planetscale", "sourcegraph",
+    "harness", "launchdarkly", "postman", "vanta", "drata", "secureframe",
+    "abnormalsecurity", "wiz", "lacework", "sysdig", "semgrep", "tailscale",
+    "shopify", "wealthsimple", "ada", "league", "wattpad", "koho", "jobber",
+    "hopper", "faire", "ritual", "borrowell", "neofinancial", "wave", "tophat",
+    "ecobee", "achievers", "q4inc", "vena", "loopio", "flipp", "clearco",
+    "ledn", "shakepay", "fellow", "knix", "mejuri", "goodfood", "lightspeed",
+    "hootsuite", "thinkific", "later", "unbounce", "dialpad", "d2l", "axonify",
+    "miovision", "kinaxis", "coveo", "nuvei", "benevity", "vidyard"
+  ],
+  "lever": [
+    "netflix", "spotify", "nuro", "eaze", "sandboxvr", "palantir", "kojo",
+    "attentive", "voleon", "matchgroup", "shieldai", "leaplabs", "plaid",
+    "quora", "brightwheel", "ironclad", "verkada", "kandji", "fountain",
+    "showpad", "yext", "addepar", "blend", "even", "blockfi", "nerdwallet",
+    "thumbtack", "udemy", "coursera", "handshake", "guild", "outschool",
+    "lighthouse", "vidyard", "achievers", "ssimwave", "ada-cx", "getfront"
+  ],
+  "ashby": [
+    "ramp", "linear", "vercel", "posthog", "hex", "replicate", "clay",
+    "elevenlabs", "baseten", "modal", "runwayml", "mercury", "notion", "cohere",
+    "openai", "anthropic", "deel", "gitpod", "browserbase", "together",
+    "mintlify", "supabase", "resend", "dagster", "prefect", "wandb",
+    "perplexity", "character", "glean", "sierra", "decagon", "harvey",
+    "abridge", "openevidence", "anysphere", "langchain", "llamaindex",
+    "pinecone", "weaviate", "chroma", "sourcegraph", "warp", "raycast",
+    "arc", "tome", "granola", "cresta", "writer", "typeface", "adept",
+    "1password", "float", "dapperlabs", "axiom", "ledn", "wealthsimple",
+    "cohere", "vidyard", "neo", "relay", "ada"
+  ]
+}
