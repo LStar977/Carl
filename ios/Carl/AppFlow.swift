@@ -39,7 +39,7 @@ struct OnboardingFlow: View {
             case 5: SearchingScreen(onDone: next)
             case 6: RevealScreen(onUnlock: next)
             default: PaywallScreen(onPurchase: {
-                Task { await store.purchasePopular(); await store.loadQueue(); await store.loadDashboard() }
+                Task { await store.loadQueue(); await store.loadDashboard() }
                 onFinished()
             })
             }

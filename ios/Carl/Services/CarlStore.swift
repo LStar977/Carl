@@ -18,6 +18,7 @@ final class CarlStore {
                          location: nil, country: "us", payFloor: 120, workType: "full-time")
 
     private let api = CarlAPI.shared
+    let storeKit = StoreService()
     static let sampleResume =
         "Senior Product Designer with 6 years of experience. Skills: Figma, " +
         "Design Systems, Prototyping, UX Research. Led design systems end-to-end."
@@ -27,6 +28,7 @@ final class CarlStore {
     func boot() async {
         _ = try? await api.authAnon()
         await refreshCredits()
+        await storeKit.load()
     }
 
     func savePreferences() async { try? await api.updatePrefs(prefs) }
@@ -39,9 +41,19 @@ final class CarlStore {
         search = try? await api.search(prefs: prefs)
     }
 
-    func purchasePopular() async {
-        _ = try? await api.purchase(packId: "popular")
+    /// Buy a pack via StoreKit, then grant credits on the backend. Falls back to
+    /// a direct backend grant when no StoreKit product is available (dev without
+    /// the .storekit config or before App Store Connect setup). Returns success.
+    @discardableResult
+    func buy(packId: String) async -> Bool {
+        if let product = storeKit.product(id: "com.carlapp.credits.\(packId)") {
+            guard let tx = await storeKit.purchase(product) else { return false }
+            _ = try? await api.purchase(packId: packId, receipt: String(tx.id))
+        } else {
+            _ = try? await api.purchase(packId: packId)
+        }
         await refreshCredits()
+        return true
     }
 
     // MARK: Main app

@@ -4,6 +4,12 @@ import SwiftUI
 
 struct PaywallScreen: View {
     var onPurchase: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+
+    private func buy(_ packId: String) {
+        Task { if await store.buy(packId: packId) { onPurchase() } }
+    }
+
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -31,10 +37,14 @@ struct PaywallScreen: View {
                 .padding(.bottom, 16)
 
                 VStack(spacing: 11) {
-                    packRow(name: "Starter · 25", sub: "25 applications", price: "$19", each: "$0.76 each")
-                    featuredPackRow()
-                    packRowBonus(name: "Pro · 300", bonus: "+40 bonus", sub: "340 applications",
-                                 price: "$149", each: "$0.44 each")
+                    Button { buy("starter") } label: {
+                        packRow(name: "Starter · 25", sub: "25 applications", price: "$19", each: "$0.76 each")
+                    }.buttonStyle(.plain)
+                    Button { buy("popular") } label: { featuredPackRow() }.buttonStyle(.plain)
+                    Button { buy("pro") } label: {
+                        packRowBonus(name: "Pro · 300", bonus: "+40 bonus", sub: "340 applications",
+                                     price: "$149", each: "$0.44 each")
+                    }.buttonStyle(.plain)
                 }
 
                 HStack(spacing: 7) {
@@ -47,7 +57,7 @@ struct PaywallScreen: View {
                 .padding(.top, 14)
 
                 Spacer()
-                Button(action: onPurchase) { CarlButton(title: "Get 110 credits — $59") }
+                Button { buy("popular") } label: { CarlButton(title: "Get 110 credits — $59") }
                     .buttonStyle(.plain)
                     .padding(.bottom, 12)
                 TrustRow(items: [("lock.fill", "Secure payment"), ("checkmark.shield.fill", "Cancel anytime"), ("checkmark", "No expiry")])

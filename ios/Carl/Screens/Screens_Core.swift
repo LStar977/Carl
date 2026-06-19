@@ -446,6 +446,7 @@ struct SettingsScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.profile)
     @Environment(CarlStore.self) private var store
     @State private var carlTalks = true
+    @State private var showPaywall = false
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.settingsBG
@@ -477,9 +478,12 @@ struct SettingsScreen: View {
                             }
                         }
                         Spacer()
-                        Text("Buy more").carl(13.5, .bold).foregroundStyle(.white)
-                            .padding(.horizontal, 16).frame(height: 38)
-                            .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Button { showPaywall = true } label: {
+                            Text("Buy more").carl(13.5, .bold).foregroundStyle(.white)
+                                .padding(.horizontal, 16).frame(height: 38)
+                                .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 18).padding(.vertical, 16)
                     .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -519,6 +523,10 @@ struct SettingsScreen: View {
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
         .task { await store.refreshCredits() }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallScreen(onPurchase: { showPaywall = false })
+                .environment(store)
+        }
     }
 
     private func settingsGroup<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
