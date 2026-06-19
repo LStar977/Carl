@@ -18,11 +18,21 @@ applications on their behalf. The brand is a *character*: Carl is warm, upbeat,
 encouraging, lightly funny — a tireless friend in your corner. The app should
 feel hopeful and momentum-building, never like a boring corporate job board.
 
-**Visual direction:** Clean, friendly, premium consumer app (think Duolingo
-warmth meets a fintech polish). A distinct Carl mascot/avatar that can show
-states (greeting, thinking/searching, celebrating). Soft, optimistic color
-palette with one strong accent color. Rounded cards, generous spacing, large
-friendly type, delightful micro-animations. Support light and dark mode.
+**Visual direction:** Clean, friendly, premium consumer app (Duolingo warmth
+meets fintech polish/trust). Match the existing Carl brand identity:
+- **Colors:** deep navy `#1B2A4A` (primary/text), bright royal blue `#2563EB`
+  (accent/CTAs), white/very-light-gray backgrounds. Keep it credible and
+  trustworthy, not childish.
+- **Logo motifs to reuse:** the brand mark is a navy "C" wrapping a magnifying
+  glass with a **briefcase inside it** (search → jobs), trailed by **motion/
+  circuit dashes** (speed + AI). Reuse the briefcase-in-magnifier and the
+  motion dashes in the searching animation, loaders, and empty states.
+- **Type:** rounded, friendly geometric sans (matching the "Carl" wordmark).
+- Rounded cards, generous spacing, large friendly type, delightful
+  micro-animations. Support light and dark mode.
+
+A distinct Carl avatar/mascot that can show states (greeting, thinking/
+searching, celebrating), derived from the brand mark so it stays on-brand.
 
 Design the following screens as a connected flow:
 
