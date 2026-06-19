@@ -158,7 +158,12 @@ to `live` when you intend to submit for real.
        application to send (the "1-tap apply" path already badged in the queue).
 3. [ ] Start with a **small daily cap** and a few real submissions you watch
        end-to-end before scaling. Confirm credits are only spent on real sends.
-4. [ ] Set `APPLY_MODE=live`.
+4. [ ] **Contact details:** the app captures the user's email + phone at
+       onboarding (pre-filled from the résumé) and submits them on every
+       application, so employers reply directly to the user. Live submission is
+       **blocked without a valid email** (`apply.js`) — verify your demo account
+       has one set.
+5. [ ] Set `APPLY_MODE=live`.
 
 ---
 

@@ -505,7 +505,8 @@ struct ConfirmScreen: View {
     var onConfirm: () -> Void = {}
     @Environment(CarlStore.self) private var store
     var body: some View {
-        PhoneFrame(chrome: .dark) {
+        @Bindable var store = store
+        return PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
         } content: {
             VStack(spacing: 0) {
@@ -538,30 +539,53 @@ struct ConfirmScreen: View {
                 .padding(.horizontal, 20)
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .carlCardShadow(0.07, radius: 24, y: 8)
-                .padding(.bottom, 18)
+                .padding(.bottom, 14)
 
-                HStack(spacing: 9) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .heavy)).foregroundStyle(.white)
-                        .frame(width: 22, height: 22).background(CarlColor.green, in: Circle())
-                    Text("Looks strong. You can fix anything that's off before I start.")
-                        .carl(13, .semibold).foregroundStyle(CarlColor.greenDeep)
+                VStack(alignment: .leading, spacing: 11) {
+                    Text("HOW EMPLOYERS REACH YOU").carl(12, .semibold)
+                        .foregroundStyle(CarlColor.textFaint).tracking(0.5)
+                    contactField(icon: "envelope.fill", placeholder: "you@email.com",
+                                 text: $store.contact.email, keyboard: .emailAddress)
+                    contactField(icon: "phone.fill", placeholder: "Phone (optional)",
+                                 text: $store.contact.phone, keyboard: .phonePad)
+                    Text("I'll put these on every application, so interview replies come straight to you.")
+                        .carl(12, .medium).foregroundStyle(CarlColor.textSoft)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 13)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(16)
+                .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .carlCardShadow(0.06, radius: 18, y: 6)
 
                 Spacer()
                 VStack(spacing: 12) {
-                    Button(action: onConfirm) { CarlButton(title: "Yep, that's me — start searching") }
-                        .buttonStyle(.plain)
-                    CarlSecondaryButton(title: "Edit details")
+                    Button(action: { Task { await store.saveContact() }; onConfirm() }) {
+                        CarlButton(title: "Yep, that's me — start searching")
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!store.contact.email.contains("@"))
+                    .opacity(store.contact.email.contains("@") ? 1 : 0.5)
                 }
             }
             .padding(.horizontal, 24)
             .padding(.top, 74).padding(.bottom, 40)
         }
+    }
+
+    private func contactField(icon: String, placeholder: String,
+                              text: Binding<String>, keyboard: UIKeyboardType) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(CarlColor.royal).frame(width: 22)
+            TextField(placeholder, text: text)
+                .carl(16, .semibold).foregroundStyle(CarlColor.navy)
+                .keyboardType(keyboard)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .background(CarlColor.screenBG, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(CarlColor.border, lineWidth: 1))
     }
 
     private func detailRow(label: String, value: String) -> some View {

@@ -5,12 +5,16 @@ import Foundation
 struct UserDTO: Codable { let id: String; let name: String; let email: String; let credits: Int }
 struct AuthResponse: Codable { let token: String; let user: UserDTO }
 
+/// The details an employer uses to reach the user — carried on every application.
+struct Contact: Codable, Equatable { var name: String; var email: String; var phone: String }
+
 struct ParsedResume: Codable {
     let targetRole: String
     let years: Int
     let seniority: String
     let skills: [String]
     let summary: String
+    var contact: Contact? = nil
 }
 
 struct JobPrefs: Codable {
@@ -116,6 +120,12 @@ actor CarlAPI {
     func updatePrefs(_ prefs: JobPrefs) async throws {
         struct Body: Codable { let prefs: JobPrefs }
         let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(prefs: prefs))
+    }
+
+    /// Save the contact details employers will use to reach the user.
+    func updateContact(_ contact: Contact) async throws {
+        struct Body: Codable { let contact: Contact }
+        let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(contact: contact))
     }
 
     func parseResume(text: String) async throws -> ParsedResume {

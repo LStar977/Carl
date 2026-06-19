@@ -21,6 +21,8 @@ final class CarlStore {
 
     var prefs = JobPrefs(titles: ["Product Designer"], locationType: "remote",
                          location: nil, country: "us", payFloor: 120, workType: "full-time")
+    /// Contact details employers will reach the user on (pre-filled from the résumé).
+    var contact = Contact(name: "", email: "", phone: "")
 
     private let api = CarlAPI.shared
     let storeKit = StoreService()
@@ -53,7 +55,16 @@ final class CarlStore {
 
     func parseResume() async {
         parsed = try? await api.parseResume(text: resumeText ?? Self.sampleResume)
+        // Pre-fill contact from the résumé so the user just confirms it.
+        if let c = parsed?.contact {
+            if contact.name.isEmpty { contact.name = c.name }
+            if contact.email.isEmpty { contact.email = c.email }
+            if contact.phone.isEmpty { contact.phone = c.phone }
+        }
     }
+
+    /// Persist the contact details employers will use to reach the user.
+    func saveContact() async { try? await api.updateContact(contact) }
 
     func runSearch() async {
         search = try? await api.search(prefs: prefs)

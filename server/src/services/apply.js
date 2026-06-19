@@ -54,6 +54,12 @@ export async function submitApplication({ user, profile, job, draft }) {
     return { submitted: true, mode: 'dry-run', tier, reference: `dry_${job.externalId}` };
   }
 
+  // Never submit a real application without a real email — the employer replies
+  // there. The app captures this during onboarding; this is the final backstop.
+  if (!applicant.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(applicant.email)) {
+    return { submitted: false, mode: 'blocked', tier, error: 'missing_contact_email' };
+  }
+
   if (tier === 'A' && job.source === 'greenhouse' && job.greenhouse) {
     const r = await submitGreenhouse({
       boardToken: job.greenhouse.boardToken,
@@ -77,11 +83,11 @@ export async function submitApplication({ user, profile, job, draft }) {
 }
 
 function applicantFrom(user, profile) {
-  const name = (user?.name || 'Alex Rivera').split(' ');
+  const name = (user?.name || '').trim().split(/\s+/).filter(Boolean);
   return {
-    firstName: name[0],
-    lastName: name.slice(1).join(' ') || 'Rivera',
-    email: user?.email || 'candidate@example.com',
+    firstName: name[0] || '',
+    lastName: name.slice(1).join(' ') || '',
+    email: (user?.email || '').trim(),
     phone: user?.phone || '',
   };
 }

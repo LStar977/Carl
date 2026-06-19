@@ -44,8 +44,8 @@ route('GET', '/health', async () => ({
 
 route('POST', '/v1/auth/anon', async () => {
   const user = store.createUser({
-    id: uid('user'), token: uid('tok'), name: 'Alex Rivera',
-    email: 'candidate@example.com', credits: config.freeCredits, createdAt: nowISO(),
+    id: uid('user'), token: uid('tok'), name: '', email: '', phone: '',
+    credits: config.freeCredits, createdAt: nowISO(),
   });
   store.saveProfile({ userId: user.id, prefs: {}, resume: null });
   return { status: 200, body: { token: user.token, user: publicUser(user) } };
@@ -53,14 +53,22 @@ route('POST', '/v1/auth/anon', async () => {
 
 route('GET', '/v1/profile', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { prefs: {}, resume: null };
-  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null } };
+  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null, contact: contactOf(ctx.user) } };
 });
 
 route('PUT', '/v1/profile', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { userId: ctx.user.id, prefs: {}, resume: null };
   p.prefs = { ...p.prefs, ...(ctx.body.prefs || {}) };
   store.saveProfile(p);
-  return { status: 200, body: { prefs: p.prefs } };
+  // The user can confirm/edit the contact details employers will reach them on.
+  const c = ctx.body.contact;
+  if (c && typeof c === 'object') {
+    if (typeof c.name === 'string' && c.name.trim()) ctx.user.name = c.name.trim();
+    if (typeof c.email === 'string') ctx.user.email = c.email.trim().toLowerCase();
+    if (typeof c.phone === 'string') ctx.user.phone = c.phone.trim();
+    store.updateUser(ctx.user);
+  }
+  return { status: 200, body: { prefs: p.prefs, contact: contactOf(ctx.user) } };
 });
 
 route('POST', '/v1/resume', async (ctx) => {
@@ -68,6 +76,13 @@ route('POST', '/v1/resume', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { userId: ctx.user.id, prefs: {}, resume: null };
   p.resume = { rawText: ctx.body.text || '', parsed };
   store.saveProfile(p);
+  // Pre-fill the user's contact from the résumé, unless they've already set it.
+  const c = parsed.contact || {};
+  let changed = false;
+  if (c.email && !ctx.user.email) { ctx.user.email = c.email; changed = true; }
+  if (c.phone && !ctx.user.phone) { ctx.user.phone = c.phone; changed = true; }
+  if (c.name && !ctx.user.name) { ctx.user.name = c.name; changed = true; }
+  if (changed) store.updateUser(ctx.user);
   return { status: 200, body: { parsed } };
 });
 
@@ -245,7 +260,8 @@ function corsHeaders() {
   };
 }
 
-function publicUser(u) { return { id: u.id, name: u.name, email: u.email, credits: u.credits }; }
+function publicUser(u) { return { id: u.id, name: u.name, email: u.email, phone: u.phone || '', credits: u.credits }; }
+function contactOf(u) { return { name: u.name || '', email: u.email || '', phone: u.phone || '' }; }
 
 server.listen(config.port, () => {
   console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode} ingest=${config.ingestEnabled}`);

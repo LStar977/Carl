@@ -17,7 +17,22 @@ export async function parseResume(rawText) {
       '"Junior"|"Mid"|"Senior"|"Staff"|"Lead", "skills": string[] (max 8), "summary": string}',
     maxTokens: 600,
   });
-  return normalize(parsed || heuristic(text));
+  return normalize(parsed || heuristic(text), text);
+}
+
+// Pull the candidate's contact details straight from the résumé text (works with
+// or without the LLM). Used to pre-fill the in-app contact step so employers can
+// actually reach the user — the application carries these.
+function extractContact(text) {
+  const email = (text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/) || [''])[0].toLowerCase();
+  const phoneRaw = (text.match(/(\+?\d[\d\s().-]{7,}\d)/) || [''])[0];
+  const phone = phoneRaw.replace(/\s+/g, ' ').trim();
+  let name = '';
+  for (const line of text.split(/\r?\n/).slice(0, 6)) {
+    const t = line.trim();
+    if (/^[A-Z][a-zA-Z'.-]+(?:\s+[A-Z][a-zA-Z'.-]+){1,3}$/.test(t)) { name = t; break; }
+  }
+  return { name, email, phone };
 }
 
 function heuristic(text) {
@@ -36,13 +51,14 @@ function heuristic(text) {
   };
 }
 
-function normalize(p) {
+function normalize(p, rawText = '') {
   return {
     targetRole: titleCase(String(p.targetRole || 'Senior Product Designer')),
     years: Number(p.years) || 6,
     seniority: p.seniority || 'Senior',
     skills: Array.isArray(p.skills) ? p.skills.slice(0, 8) : [],
     summary: String(p.summary || ''),
+    contact: extractContact(rawText),
   };
 }
 
