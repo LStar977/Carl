@@ -111,6 +111,7 @@ struct ScreenGallery: View {
             .navigationTitle("Carl")
         }
         .environment(\.phoneFrameStyle, .mock)
+        .environment(CarlStore.sample)
     }
 
     private var header: some View {

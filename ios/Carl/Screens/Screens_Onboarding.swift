@@ -333,6 +333,7 @@ private struct ShimmerLine: View {
 
 struct ConfirmScreen: View {
     var onConfirm: () -> Void = {}
+    @Environment(CarlStore.self) private var store
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -346,20 +347,19 @@ struct ConfirmScreen: View {
                 .padding(.bottom, 20)
 
                 VStack(spacing: 0) {
-                    detailRow(label: "Target role", value: "Senior Product Designer")
+                    detailRow(label: "Target role", value: store.parsed?.targetRole ?? "Senior Product Designer")
                     Divider().overlay(CarlColor.hairline)
-                    detailRow(label: "Experience", value: "6 years · Senior")
+                    detailRow(label: "Experience", value: "\(store.parsed?.years ?? 6) years · \(store.parsed?.seniority ?? "Senior")")
                     Divider().overlay(CarlColor.hairline)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("TOP SKILLS").carl(12, .semibold).foregroundStyle(CarlColor.textFaint).tracking(0.5)
+                        let skills = store.parsed?.skills ?? ["Figma", "Design Systems", "Prototyping", "UX Research"]
                         HStack(spacing: 8) {
-                            SkillTag("Figma")
-                            SkillTag("Design Systems")
-                            SkillTag("Prototyping")
+                            ForEach(skills.prefix(3), id: \.self) { SkillTag($0) }
                         }
                         HStack(spacing: 8) {
-                            SkillTag("UX Research")
-                            SkillTag("+4 more", muted: true)
+                            ForEach(Array(skills.dropFirst(3).prefix(2)), id: \.self) { SkillTag($0) }
+                            if skills.count > 5 { SkillTag("+\(skills.count - 5) more", muted: true) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

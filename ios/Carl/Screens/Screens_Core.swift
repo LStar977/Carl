@@ -5,6 +5,8 @@ import SwiftUI
 struct QueueScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.queue)
     var onOpenDetail: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -17,16 +19,16 @@ struct QueueScreen: View {
                         Spacer()
                         HStack(spacing: 6) {
                             Circle().fill(CarlColor.royal).frame(width: 8, height: 8)
-                            Text("102 credits").carl(13, .heavy).foregroundStyle(CarlColor.royal)
+                            Text("\(store.credits) credits").carl(13, .heavy).foregroundStyle(CarlColor.royal)
                         }
                         .padding(.horizontal, 13).padding(.vertical, 7)
                         .background(CarlColor.tintFill, in: Capsule())
                         .overlay(Capsule().stroke(Color(hex: 0xD5E1FB), lineWidth: 1))
                     }
                     HStack(spacing: 8) {
-                        tab("Ready · 14", selected: true)
-                        tab("Submitted · 204", selected: false)
-                        tab("Responses · 19", selected: false)
+                        tab("Ready · \(store.queue.count)", selected: true)
+                        tab("Submitted", selected: false)
+                        tab("Responses", selected: false)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -36,23 +38,29 @@ struct QueueScreen: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 13) {
-                        HStack(spacing: 10) {
-                            CarlMark(eyes: .happy).frame(width: 30, height: 29)
-                            Text("I've prepped 14 applications. Skim them and hit submit — takes 2 minutes.")
-                                .carl(13.5, .bold).foregroundStyle(CarlColor.greenDeep)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 14).padding(.vertical, 11)
-                        .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        if store.queue.isEmpty {
+                            emptyState
+                        } else {
+                            HStack(spacing: 10) {
+                                CarlMark(eyes: .happy).frame(width: 30, height: 29)
+                                Text("I've prepped \(store.queue.count) applications. Skim them and hit submit — takes 2 minutes.")
+                                    .carl(13.5, .bold).foregroundStyle(CarlColor.greenDeep)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 11)
+                            .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
-                        expandedCard
-                        collapsedCard
-                            .contentShape(Rectangle())
-                            .onTapGesture(perform: onOpenDetail)
-                        fadedCard
-                            .contentShape(Rectangle())
-                            .onTapGesture(perform: onOpenDetail)
+                            ForEach(Array(store.queue.enumerated()), id: \.element.id) { idx, item in
+                                if idx == 0 {
+                                    expandedCard(item)
+                                } else {
+                                    collapsedCard(item)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture(perform: onOpenDetail)
+                                }
+                            }
+                        }
                     }
                     .padding(.horizontal, 22)
                     .padding(.bottom, 190)
@@ -60,18 +68,37 @@ struct QueueScreen: View {
             }
             .overlay(alignment: .bottom) {
                 VStack(spacing: 0) {
-                    CarlButton(title: "Confirm all 14", trailingNote: "· uses 14 credits",
-                               fill: CarlColor.navy, height: 54, glow: false)
+                    if !store.queue.isEmpty {
+                        Button {
+                            Task { await store.confirmAll() }
+                        } label: {
+                            CarlButton(title: "Confirm all \(store.queue.count)",
+                                       trailingNote: "· uses \(min(store.queue.count, store.credits)) credits",
+                                       fill: CarlColor.navy, height: 54, glow: false)
+                        }
+                        .buttonStyle(.plain)
                         .shadow(color: CarlColor.navy.opacity(0.26), radius: 10, y: 10)
                         .padding(.horizontal, 22).padding(.bottom, 12).padding(.top, 14)
                         .background(alignment: .bottom) {
                             LinearGradient(colors: [CarlColor.screenBG.opacity(0), CarlColor.screenBG],
                                            startPoint: .top, endPoint: .bottom)
                         }
-                    CarlTabBar(selected: selectedTab)
+                    }
+                    CarlTabBar(selected: selectedTab, queueBadge: store.queue.count)
                 }
             }
         }
+        .task { await store.loadQueue() }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            CarlAvatar(eyes: .happy, showDashes: true).frame(width: 110, height: 104)
+            Text("You're all caught up").carl(20, .heavy).foregroundStyle(CarlColor.navy)
+            Text("Carl's still scanning — new matches will land here.")
+                .carl(14, .medium).foregroundStyle(CarlColor.textSoft).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity).padding(.top, 60)
     }
 
     private func tab(_ title: String, selected: Bool) -> some View {
@@ -84,20 +111,20 @@ struct QueueScreen: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? .clear : CarlColor.hairlineCool, lineWidth: 1))
     }
 
-    private var expandedCard: some View {
+    private func expandedCard(_ item: QueueItem) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                JobAvatar(letter: "N", color: CarlColor.navy)
+                JobAvatar(letter: item.letter, color: CarlColor.named(item.avatarColor))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Senior Product Designer").carl(15.5, .bold).foregroundStyle(CarlColor.navy)
-                    Text("Northwind · Remote · $145–170k").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
+                    Text(item.title).carl(15.5, .bold).foregroundStyle(CarlColor.navy)
+                    Text("\(item.company) · \(item.detail)").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
                 }
                 Spacer(minLength: 6)
-                FitBadge(text: "96% fit")
+                FitBadge(text: "\(item.fit)% fit")
             }
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").font(.system(size: 12, weight: .semibold)).foregroundStyle(CarlColor.royal)
-                Text("Why Carl picked this: skills + 6 yrs match, pay in range, remote.")
+                Text("Why Carl picked this: \(item.reasons.first ?? "strong fit").")
                     .carl(12, .semibold).foregroundStyle(CarlColor.textMuted)
                 Spacer(minLength: 0)
             }
@@ -110,10 +137,10 @@ struct QueueScreen: View {
                     Image(systemName: "doc.text").font(.system(size: 13, weight: .semibold)).foregroundStyle(CarlColor.royal)
                     Text("Carl drafted your application").carl(13, .heavy).foregroundStyle(CarlColor.navy)
                 }
-                draftBox(label: "Cover note",
-                         text: "\"Northwind's systems-led design culture is exactly where I do my best work. Over 6 years I've shipped design systems that…\"")
-                draftBox(label: "Why do you want this role?",
-                         text: "\"I want to own a design system end-to-end with a team that values craft…\"")
+                draftBox(label: "Cover note", text: "\"\(item.draft.coverNote)\"")
+                if let qa = item.draft.answers.first {
+                    draftBox(label: qa.question, text: "\"\(qa.answer)\"")
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 12)
@@ -126,8 +153,13 @@ struct QueueScreen: View {
                     .frame(width: 52, height: 48)
                     .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.border, lineWidth: 1.5))
-                CarlButton(title: "Confirm & submit", trailingNote: "· 1 credit", height: 48, glow: false)
-                    .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
+                Button {
+                    Task { await store.confirm(item.matchId) }
+                } label: {
+                    CarlButton(title: "Confirm & submit", trailingNote: "· 1 credit", height: 48, glow: false)
+                        .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 14)
         }
@@ -147,16 +179,16 @@ struct QueueScreen: View {
         .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
-    private var collapsedCard: some View {
+    private func collapsedCard(_ item: QueueItem) -> some View {
         VStack(spacing: 13) {
             HStack(spacing: 12) {
-                JobAvatar(letter: "L", color: CarlColor.greenhouse)
+                JobAvatar(letter: item.letter, color: CarlColor.named(item.avatarColor))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Product Designer").carl(15.5, .bold).foregroundStyle(CarlColor.navy)
-                    Text("Lumen Health · SF Hybrid · $130–155k").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
+                    Text(item.title).carl(15.5, .bold).foregroundStyle(CarlColor.navy)
+                    Text("\(item.company) · \(item.detail)").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
                 }
                 Spacer(minLength: 6)
-                FitBadge(text: "94% fit")
+                FitBadge(text: "\(item.fit)% fit")
             }
             HStack {
                 HStack(spacing: 7) {
@@ -171,21 +203,6 @@ struct QueueScreen: View {
         .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .carlCardShadow(0.06)
     }
-
-    private var fadedCard: some View {
-        HStack(spacing: 12) {
-            JobAvatar(letter: "V", color: CarlColor.lever)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Staff Product Designer").carl(15.5, .bold).foregroundStyle(CarlColor.navy)
-                Text("Vela Robotics · Austin · $170–200k").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
-            }
-            Spacer(minLength: 6)
-        }
-        .padding(16)
-        .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .carlCardShadow(0.06)
-        .opacity(0.6)
-    }
 }
 
 // MARK: - 14 · Dashboard / progress
@@ -193,6 +210,7 @@ struct QueueScreen: View {
 struct DashboardScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.home)
     var onOpenDetail: () -> Void = {}
+    @Environment(CarlStore.self) private var store
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -216,7 +234,7 @@ struct DashboardScreen: View {
                         ZStack(alignment: .topTrailing) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("Today").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
-                                Text("Carl applied to 47 jobs").carl(44, .heavy).foregroundStyle(.white)
+                                Text("Carl applied to \(store.dashboard?.appliedToday ?? 0) jobs").carl(44, .heavy).foregroundStyle(.white)
                                     .padding(.top, 4)
                                 Text("Nice work resting while Carl hustled.")
                                     .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
@@ -234,9 +252,9 @@ struct DashboardScreen: View {
                         .shadow(color: CarlColor.royal.opacity(0.26), radius: 14, y: 12)
 
                         HStack(spacing: 10) {
-                            statCard("218", "Applied", CarlColor.navy)
-                            statCard("19", "Responses", CarlColor.royal)
-                            statCard("4", "Interviews", CarlColor.green)
+                            statCard("\(store.dashboard?.totalApplied ?? 0)", "Applied", CarlColor.navy)
+                            statCard("\(store.dashboard?.responses ?? 0)", "Responses", CarlColor.royal)
+                            statCard("\(store.dashboard?.interviews ?? 0)", "Interviews", CarlColor.green)
                         }
 
                         HStack {
@@ -245,12 +263,15 @@ struct DashboardScreen: View {
                             Text("See all").carl(13, .bold).foregroundStyle(CarlColor.royal)
                         }
 
+                        let acts = Array((store.dashboard?.activity ?? []).prefix(3))
                         VStack(spacing: 0) {
-                            activityRow(CarlColor.green, "Acme replied to your application", "1h")
-                            Divider().overlay(CarlColor.hairline)
-                            activityRow(CarlColor.royal, "Applied to Senior Designer · Acme", "2h")
-                            Divider().overlay(CarlColor.hairline)
-                            activityRow(CarlColor.royal, "Applied to Product Designer · Lumen", "2h")
+                            if acts.isEmpty {
+                                activityRow(CarlColor.textGhost, "No activity yet — confirm a few to get going", "")
+                            }
+                            ForEach(Array(acts.enumerated()), id: \.element.id) { idx, a in
+                                activityRow(a.dot == "green" ? CarlColor.green : CarlColor.royal, a.text, a.ts)
+                                if idx < acts.count - 1 { Divider().overlay(CarlColor.hairline) }
+                            }
                         }
                         .padding(.horizontal, 16)
                         .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -263,8 +284,9 @@ struct DashboardScreen: View {
                     .padding(.bottom, 100)
                 }
             }
-            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab) }
+            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
+        .task { await store.loadDashboard() }
     }
 
     private func statCard(_ value: String, _ label: String, _ color: Color) -> some View {
@@ -422,6 +444,7 @@ struct ApplicationDetailScreen: View {
 
 struct SettingsScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.profile)
+    @Environment(CarlStore.self) private var store
     @State private var carlTalks = true
     var body: some View {
         PhoneFrame(chrome: .dark) {
@@ -449,8 +472,8 @@ struct SettingsScreen: View {
                                 .frame(width: 38, height: 38)
                                 .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("102 credits").carl(18, .heavy).foregroundStyle(CarlColor.navy)
-                                Text("≈ 102 applications left").carl(12, .semibold).foregroundStyle(CarlColor.textFaint)
+                                Text("\(store.credits) credits").carl(18, .heavy).foregroundStyle(CarlColor.navy)
+                                Text("≈ \(store.credits) applications left").carl(12, .semibold).foregroundStyle(CarlColor.textFaint)
                             }
                         }
                         Spacer()
@@ -493,8 +516,9 @@ struct SettingsScreen: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 74).padding(.bottom, 100)
             }
-            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab) }
+            .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
+        .task { await store.refreshCredits() }
     }
 
     private func settingsGroup<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

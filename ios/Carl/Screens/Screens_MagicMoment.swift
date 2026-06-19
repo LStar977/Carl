@@ -93,10 +93,13 @@ struct SearchingScreen: View {
 
 struct RevealScreen: View {
     var onUnlock: () -> Void = {}
+    @Environment(CarlStore.self) private var store
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navy
         } content: {
+            let count = store.search?.count ?? 312
+            let matches = store.search?.topMatches.map { JobMatch(dto: $0) } ?? SampleData.topMatches
             ZStack(alignment: .top) {
                 ConfettiBits()
                 VStack(spacing: 0) {
@@ -104,7 +107,7 @@ struct RevealScreen: View {
                         .padding(.bottom, 8)
                     VStack(spacing: 10) {
                         (Text("I found ").carl(27, .heavy).foregroundColor(.white)
-                         + Text("312 jobs").carl(27, .heavy).foregroundColor(CarlColor.royalSoft)
+                         + Text("\(count) jobs").carl(27, .heavy).foregroundColor(CarlColor.royalSoft)
                          + Text(" worth applying to in your area.").carl(27, .heavy).foregroundColor(.white))
                             .multilineTextAlignment(.center)
                         Text("All matched to your skills, pay, and location.")
@@ -115,7 +118,7 @@ struct RevealScreen: View {
                     .padding(.bottom, 22)
 
                     VStack(spacing: 11) {
-                        ForEach(SampleData.topMatches) { MatchCard(job: $0) }
+                        ForEach(matches) { MatchCard(job: $0) }
                     }
                     Spacer()
                 }
@@ -123,10 +126,10 @@ struct RevealScreen: View {
                 .padding(.top, 72)
 
                 VStack(spacing: 14) {
-                    Text("+ 309 more great-fit matches waiting")
+                    Text("+ \(max(count - matches.count, 0)) more great-fit matches waiting")
                         .carl(13, .semibold).foregroundStyle(CarlColor.textOnNavyMuted)
                     Button(action: onUnlock) {
-                        CarlButton(title: "Unlock all 312 matches", systemIcon: "lock.fill")
+                        CarlButton(title: "Unlock all \(count) matches", systemIcon: "lock.fill")
                     }
                     .buttonStyle(.plain)
                 }
