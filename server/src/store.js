@@ -9,6 +9,7 @@ const db = {
   applications: new Map(), // userId -> Application[]
   activity: new Map(),     // userId -> Activity[] (newest first)
   tx: new Map(),           // userId -> Transaction[]
+  usedTx: new Set(),       // consumed App Store transactionIds (replay guard)
 };
 
 export const store = {
@@ -63,4 +64,11 @@ export const store = {
     return t;
   },
   getTx(userId) { return db.tx.get(userId) || []; },
+
+  /** Reserve a transactionId; returns false if it was already consumed. */
+  useTransaction(txId) {
+    if (db.usedTx.has(txId)) return false;
+    db.usedTx.add(txId);
+    return true;
+  },
 };

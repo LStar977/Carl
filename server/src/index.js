@@ -150,7 +150,7 @@ route('GET', '/v1/credits', async (ctx) => ({
 }));
 
 route('POST', '/v1/credits/purchase', async (ctx) => {
-  const r = purchase(ctx.user, ctx.body.packId, ctx.body.receipt);
+  const r = await purchase(ctx.user, ctx.body.packId, ctx.body.receipt);
   return r.ok ? { status: 200, body: r } : { status: 400, body: r };
 });
 

@@ -59,9 +59,22 @@ src/
 test/smoke.mjs        end-to-end flow test
 ```
 
+## App Store receipt validation
+
+StoreKit 2 sends the app a signed transaction (JWS). `src/appstore.js` verifies
+it against Apple's root certificate (no API key needed): it validates the x5c
+chain, the ES256 signature, the bundle id, and guards against replay by
+transaction id, then derives the pack from the verified product id.
+
+- Dev / simulator: `APPSTORE_VERIFY=off` (default) — trusts the client so the
+  local StoreKit config works.
+- Sandbox / TestFlight / App Store: `APPSTORE_VERIFY=on` + drop Apple Root CA-G3
+  in `certs/` (see `certs/README.md`).
+
+Tests: `npm test` (crypto verification with a synthetic chain + the full flow).
+
 ## Production TODO
 
 - Swap the in-memory store for Postgres.
-- Validate StoreKit receipts with Apple before granting credits.
 - Sign the Adzuna commercial agreement; add real ATS apply credentials.
 - Add auth (sign-in), rate limiting, and persistence for the apply queue/workers.

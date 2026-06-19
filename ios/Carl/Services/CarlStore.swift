@@ -66,7 +66,8 @@ final class CarlStore {
     func buy(packId: String) async -> Bool {
         if let product = storeKit.product(id: "com.carlapp.credits.\(packId)") {
             guard let tx = await storeKit.purchase(product) else { return false }
-            _ = try? await api.purchase(packId: packId, receipt: String(tx.id))
+            // Send the signed transaction (JWS) so the backend can verify it.
+            _ = try? await api.purchase(packId: packId, receipt: tx.jwsRepresentation)
         } else {
             _ = try? await api.purchase(packId: packId)
         }

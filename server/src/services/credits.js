@@ -1,6 +1,8 @@
 // Credits = applications. A credit is consumed only when Carl actually submits.
 import { store } from '../store.js';
+import { config } from '../config.js';
 import { nowISO, uid } from '../util.js';
+import { verifyTransaction, decodeJWSPayload, packIdFromProduct } from '../appstore.js';
 
 export const PACKS = [
   { id: 'starter', name: 'Starter', credits: 25, applications: 25, price: 1900, priceText: '$19' },
@@ -26,14 +28,50 @@ export function grant(user, n, meta = {}) {
 }
 
 /**
- * Apply a purchase. In production, `receipt` must be validated with Apple's
- * App Store server API before granting. Here we validate the pack and grant.
+ * Apply a purchase. `receipt` is the StoreKit 2 signed transaction JWS.
+ * When APPSTORE_VERIFY=on we cryptographically verify it against Apple's root,
+ * derive the pack from the verified productId, and guard against replay by
+ * transactionId. In dev (verify off) we trust the client but still read the
+ * product/transaction from the JWS when present.
  */
-export function purchase(user, packId /*, receipt */) {
-  const pack = PACKS.find((p) => p.id === packId);
+export async function purchase(user, packId, receipt) {
+  let resolvedPackId = packId;
+  let transactionId = null;
+
+  const looksLikeJWS = receipt && String(receipt).split('.').length === 3;
+  if (looksLikeJWS) {
+    if (config.appstoreVerify === 'on') {
+      let payload;
+      try {
+        payload = verifyTransaction(receipt, {
+          rootCertPEM: config.appleRootCert,
+          bundleId: config.appleBundleId,
+        });
+      } catch (e) {
+        return { ok: false, error: 'receipt_invalid', detail: String(e.message) };
+      }
+      resolvedPackId = packIdFromProduct(payload.productId) || packId;
+      transactionId = payload.transactionId;
+    } else {
+      const payload = decodeJWSPayload(receipt);
+      if (payload) {
+        resolvedPackId = packIdFromProduct(payload.productId) || packId;
+        transactionId = payload.transactionId;
+      }
+    }
+  } else if (config.appstoreVerify === 'on') {
+    // In production a receipt is required.
+    return { ok: false, error: 'receipt_required' };
+  }
+
+  if (transactionId && !store.useTransaction(transactionId)) {
+    return { ok: false, error: 'duplicate_transaction' };
+  }
+
+  const pack = PACKS.find((p) => p.id === resolvedPackId);
   if (!pack) return { ok: false, error: 'unknown_pack' };
-  // TODO: validate StoreKit `receipt` with Apple before granting.
+
   const total = pack.credits + (pack.bonus || 0);
-  const newBalance = grant(user, total, { type: 'purchase', packId, price: pack.price });
+  const newBalance = grant(user, total, { type: 'purchase', packId: pack.id, price: pack.price, transactionId });
   return { ok: true, granted: total, balance: newBalance, pack };
 }

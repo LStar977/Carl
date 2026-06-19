@@ -30,7 +30,17 @@ export const config = {
 
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),
+
+  // App Store receipt validation.
+  appstoreVerify: (process.env.APPSTORE_VERIFY || 'off').toLowerCase(), // 'off' | 'on'
+  appleBundleId: process.env.APPLE_BUNDLE_ID || 'com.carlapp.Carl',
+  appleRootCert: loadRootCert(),
 };
+
+function loadRootCert() {
+  const path = process.env.APPLE_ROOT_CA_PATH || join(root, 'certs', 'AppleRootCA-G3.pem');
+  try { return readFileSync(path, 'utf8'); } catch { return ''; }
+}
 
 export const hasLLM = !!config.anthropicKey;
 export const hasAdzuna = !!(config.adzunaAppId && config.adzunaAppKey);
