@@ -62,26 +62,33 @@ Carl's job is to discover broadly, then route each match:
 
 Coverage is strongest where **discovery AND apply overlap**:
 
-| Market | Discovery | Tier A auto-apply | Verdict |
-|--------|-----------|-------------------|---------|
-| **United States** | Adzuna US + USAJOBS | Greenhouse + Lever (concentrated here) | **Best — full loop. Launch here.** |
-| **UK** | Adzuna UK | Some Greenhouse/Lever | **Strong fast-follow** |
-| **Canada** | Adzuna CA | Some Greenhouse/Lever | **Strong fast-follow** |
-| **Australia** | Adzuna AU | Some Greenhouse/Lever | **Strong fast-follow** |
-| Germany, France, Netherlands, Ireland*, etc. | Adzuna | Thinner ATS overlap | Discovery + Tier B works; auto-apply spotty |
-| Other Adzuna countries (Austria, Belgium, Brazil, India, Italy, Mexico, NZ, Poland, Singapore, South Africa, Spain, Switzerland) | Adzuna | Sparse | Discovery + Tier B only |
+Because v1 uses the **Assisted (Tier A + B)** model, *every* discovered job in a
+covered country is appliable — Tier B (Carl pre-fills + user confirms) covers
+any employer not on a supported ATS. So "Tier A coverage" only changes the share
+that is fully one-tap auto, **not** whether Carl works in a market.
 
-\*Ireland not in Adzuna's 19; revisit with another source later.
+| Market | Discovery | Tier A auto-apply | Assisted (Tier B) | Verdict |
+|--------|-----------|-------------------|-------------------|---------|
+| **United States** | Adzuna US + USAJOBS | Greenhouse + Lever (concentrated here) | All employers | **Launch market** |
+| **Canada** | Adzuna CA (+ US-remote roles open to CA) | Greenhouse/Lever Canadian employers (esp. tech) | All employers | **Launch market** |
+| **UK** | Adzuna UK | Some Greenhouse/Lever | All employers | **Fast-follow** |
+| **Australia** | Adzuna AU | Some Greenhouse/Lever | All employers | **Fast-follow** |
+| Germany, France, Netherlands, etc. | Adzuna | Thinner ATS overlap | All employers | Works; auto-apply share lower |
+| Other Adzuna countries (Austria, Belgium, Brazil, India, Italy, Mexico, NZ, Poland, Singapore, South Africa, Spain, Switzerland) | Adzuna | Sparse | All employers | Works; mostly assisted |
 
 ### Recommendation
-- **v1 launch: United States only.** It's the one market where discovery *and*
-  real auto-apply (Greenhouse/Lever) both land — so Carl's core promise actually
-  works end to end, and App Store review is cleanest.
-- **Fast-follow: UK, Canada, Australia.** Adzuna covers them well and Tier B
-  (assisted) works everywhere; Tier A kicks in for any Greenhouse/Lever employer.
-- **Everywhere else in Adzuna's footprint:** technically we can show matches and
-  do assisted apply, but auto-apply coverage is thin — don't market auto-apply
-  there until ATS coverage is added (Phase 2: Ashby/Workable/etc.).
+- **v1 launch: United States + Canada.** Both have full discovery (Adzuna US/CA
+  + USAJOBS for US federal) and full apply coverage via the Tier A + B model.
+  Canadian users get the complete experience; US users simply have a higher
+  share of fully hands-off (Tier A) auto-applies.
+- **Fast-follow: UK, Australia.** Adzuna covers them well; same Tier A + B model.
+- **Everywhere else in Adzuna's footprint:** Carl still works (discovery +
+  assisted apply), but a larger share is Tier B until more ATS adapters land
+  (Phase 2: Ashby/Workable/etc.). Don't *market* "fully automatic" there yet.
+
+> Note: Adzuna's commercial agreement and the Greenhouse/Lever adapters cover
+> US + Canada with the same integration work — there is **no extra source to
+> sign or build** to support Canada at launch.
 
 ## Pre-launch to-dos this surfaces
 - Sign **Adzuna commercial agreement** before launch (free tier is dev-only).

@@ -5,7 +5,8 @@
 > screens (Claude Design) and then build it.
 >
 > **Locked decisions:** apply engine = **Assisted (Tier A + B) with a review
-> queue** for v1; monetization = **credit packs** (pay per application).
+> queue** for v1; monetization = **credit packs** (pay per application); launch
+> markets = **United States + Canada** (see `job-sources-and-coverage.md`).
 
 ---
 
