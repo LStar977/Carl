@@ -1,8 +1,8 @@
 import SwiftUI
 
-// MARK: - 10 · Paywall · Variation A (selectable stack)
+// MARK: - Paywall (selectable credit-pack stack)
 
-struct PaywallAScreen: View {
+struct PaywallScreen: View {
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -30,7 +30,7 @@ struct PaywallAScreen: View {
                 .padding(.bottom, 16)
 
                 VStack(spacing: 11) {
-                    packRow(name: "Starter · 25", sub: "25 applications", price: "$19", each: "$0.76 each", selected: false)
+                    packRow(name: "Starter · 25", sub: "25 applications", price: "$19", each: "$0.76 each")
                     featuredPackRow()
                     packRowBonus(name: "Pro · 300", bonus: "+40 bonus", sub: "340 applications",
                                  price: "$149", each: "$0.44 each")
@@ -59,7 +59,7 @@ struct PaywallAScreen: View {
         }
     }
 
-    private func packRow(name: String, sub: String, price: String, each: String, selected: Bool) -> some View {
+    private func packRow(name: String, sub: String, price: String, each: String) -> some View {
         HStack(spacing: 14) {
             Circle().strokeBorder(Color(hex: 0xC5CDDD), lineWidth: 2).frame(width: 22, height: 22)
             VStack(alignment: .leading, spacing: 2) {
@@ -147,108 +147,7 @@ struct TrustRow: View {
     }
 }
 
-// MARK: - 11 · Paywall · Variation B (featured hero)
-
-struct PaywallBScreen: View {
-    var body: some View {
-        PhoneFrame(chrome: .light, homeIndicatorLight: true) {
-            CarlColor.navy
-        } content: {
-            VStack(spacing: 0) {
-                VStack(spacing: 4) {
-                    Text("Pick your pack").carl(25, .heavy).foregroundStyle(.white)
-                    Text("1 credit = 1 application Carl submits for you")
-                        .carl(14, .medium).foregroundStyle(CarlColor.textOnNavyMuted)
-                }
-                .padding(.bottom, 18)
-
-                // featured white card
-                VStack(spacing: 0) {
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            (Text("100 ").carl(34, .heavy).foregroundColor(CarlColor.navy)
-                             + Text("+10").carl(16, .heavy).foregroundColor(CarlColor.royal))
-                            Text("110 applications").carl(13, .semibold).foregroundStyle(CarlColor.textFaint)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 5) {
-                            Text("$59").carl(34, .heavy).foregroundStyle(CarlColor.navy)
-                            Text("$0.54 each").carl(13, .bold).foregroundStyle(CarlColor.royal)
-                        }
-                    }
-                    CarlButton(title: "Get 110 credits", height: 58, glow: false)
-                        .shadow(color: CarlColor.royal.opacity(0.34), radius: 10, y: 10)
-                        .padding(.top, 16)
-                }
-                .padding(22)
-                .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .shadow(color: .black.opacity(0.3), radius: 18, y: 14)
-                .overlay(alignment: .topLeading) {
-                    HStack(spacing: 8) {
-                        Text("MOST POPULAR").carl(11, .heavy).foregroundStyle(CarlColor.navy)
-                            .padding(.horizontal, 12).padding(.vertical, 5)
-                            .background(CarlColor.gold, in: Capsule())
-                        Text("SAVE 29%").carl(11, .heavy).foregroundStyle(CarlColor.greenDeep)
-                            .padding(.horizontal, 12).padding(.vertical, 5)
-                            .background(CarlColor.greenBG, in: Capsule())
-                    }
-                    .offset(x: 22, y: -12)
-                }
-                .padding(.bottom, 14)
-
-                HStack(spacing: 11) {
-                    smallPack(name: "STARTER", count: "25", bonus: nil, each: "$0.76 each", price: "$19")
-                    smallPack(name: "PRO", count: "300", bonus: "+40", each: "$0.44 each", price: "$149")
-                }
-                .padding(.bottom, 16)
-
-                HStack(alignment: .top, spacing: 11) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .heavy)).foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                        .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    (Text("Only pay when Carl applies. ").carl(13, .bold).foregroundColor(.white)
-                     + Text("A credit is spent the moment he submits — never for searching or matching. First 3 are free.")
-                        .carl(13, .medium).foregroundColor(CarlColor.textOnNavySoft))
-                }
-                .padding(.horizontal, 16).padding(.vertical, 14)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                Spacer()
-                TrustRow(items: [("lock.fill", "Secure"), ("checkmark.shield.fill", "Cancel anytime"), ("checkmark", "Never expire")],
-                         tint: Color(hex: 0x7E91BB))
-            }
-            .padding(.horizontal, 22)
-            .padding(.top, 106).padding(.bottom, 36)
-            .overlay(alignment: .topLeading) {
-                Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
-                    .padding(.top, 62).padding(.leading, 24)
-            }
-        }
-    }
-
-    private func smallPack(name: String, count: String, bonus: String?, each: String, price: String) -> some View {
-        VStack(spacing: 0) {
-            Text(name).carl(13, .bold).foregroundStyle(CarlColor.textOnNavyMuted).tracking(1)
-            HStack(alignment: .top, spacing: 2) {
-                Text(count).carl(26, .heavy).foregroundStyle(.white)
-                if let bonus { Text(bonus).carl(13, .bold).foregroundStyle(CarlColor.royalSoft) }
-            }
-            .padding(.top, 6)
-            Text(each).carl(12, .semibold).foregroundStyle(CarlColor.textOnNavyMuted)
-                .padding(.top, 5).padding(.bottom, 12)
-            Text(price).carl(15, .bold).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).frame(height: 42)
-                .overlay(RoundedRectangle(cornerRadius: 13).stroke(.white.opacity(0.25), lineWidth: 1.5))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(16)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.12), lineWidth: 1))
-    }
-}
-
-// MARK: - 12 · Buy more credits (sheet)
+// MARK: - Buy more credits (sheet)
 
 struct BuyMoreScreen: View {
     var body: some View {

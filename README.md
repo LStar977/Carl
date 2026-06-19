@@ -8,7 +8,7 @@ spending nights filling out the same form 300 times.
 
 ## Repo layout
 
-- **`ios/`** — the native SwiftUI iOS app (all 18 designed screens). See
+- **`ios/`** — the native SwiftUI iOS app (all 15 screens). See
   [`ios/README.md`](ios/README.md) to build and run.
 - **`docs/`** — product + design specs:
   - [`how-carl-works.md`](docs/how-carl-works.md) — full product spec (journey,

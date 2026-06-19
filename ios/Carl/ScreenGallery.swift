@@ -37,25 +37,22 @@ struct ScreenGallery: View {
             GalleryEntry(label: "05 · Confirm what Carl learned", view: AnyView(ConfirmScreen()))
         ]),
         GallerySection(title: "The magic moment — search & reveal", entries: [
-            GalleryEntry(label: "06 · Searching · Variation A", view: AnyView(SearchingAScreen())),
-            GalleryEntry(label: "07 · Searching · Variation B", view: AnyView(SearchingBScreen())),
-            GalleryEntry(label: "08 · The reveal · Variation A", view: AnyView(RevealAScreen())),
-            GalleryEntry(label: "09 · The reveal · Variation B", view: AnyView(RevealBScreen()))
+            GalleryEntry(label: "06 · Carl is searching", view: AnyView(SearchingScreen())),
+            GalleryEntry(label: "07 · The reveal", view: AnyView(RevealScreen()))
         ]),
         GallerySection(title: "Paywall — credit packs", entries: [
-            GalleryEntry(label: "10 · Paywall · Variation A", view: AnyView(PaywallAScreen())),
-            GalleryEntry(label: "11 · Paywall · Variation B", view: AnyView(PaywallBScreen())),
-            GalleryEntry(label: "12 · Buy more credits", view: AnyView(BuyMoreScreen()))
+            GalleryEntry(label: "08 · Paywall", view: AnyView(PaywallScreen())),
+            GalleryEntry(label: "09 · Buy more credits", view: AnyView(BuyMoreScreen()))
         ]),
         GallerySection(title: "The core product", entries: [
-            GalleryEntry(label: "13 · Review & apply queue", view: AnyView(QueueScreen())),
-            GalleryEntry(label: "14 · Dashboard / progress", view: AnyView(DashboardScreen())),
-            GalleryEntry(label: "15 · Application detail", view: AnyView(ApplicationDetailScreen())),
-            GalleryEntry(label: "16 · Settings / profile", view: AnyView(SettingsScreen()))
+            GalleryEntry(label: "10 · Review & apply queue", view: AnyView(QueueScreen())),
+            GalleryEntry(label: "11 · Dashboard / progress", view: AnyView(DashboardScreen())),
+            GalleryEntry(label: "12 · Application detail", view: AnyView(ApplicationDetailScreen())),
+            GalleryEntry(label: "13 · Settings / profile", view: AnyView(SettingsScreen()))
         ]),
         GallerySection(title: "Supporting states", entries: [
-            GalleryEntry(label: "17 · All caught up", view: AnyView(AllCaughtUpScreen())),
-            GalleryEntry(label: "18 · Push notification", view: AnyView(PushNotificationScreen()))
+            GalleryEntry(label: "14 · All caught up", view: AnyView(AllCaughtUpScreen())),
+            GalleryEntry(label: "15 · Push notification", view: AnyView(PushNotificationScreen()))
         ])
     ]
 
@@ -122,7 +119,7 @@ struct ScreenGallery: View {
                 .background(CarlColor.navy, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Carl").carl(26, .heavy).foregroundStyle(CarlColor.navy)
-                Text("18 screens · iOS · Plus Jakarta Sans")
+                Text("15 screens · iOS · Plus Jakarta Sans")
                     .carl(13, .medium).foregroundStyle(CarlColor.textMuted)
             }
         }
@@ -153,8 +150,8 @@ struct ScreenGallery: View {
 struct HeroFlow: View {
     private let pages: [AnyView] = [
         AnyView(MeetCarlScreen()), AnyView(InterviewScreen()), AnyView(ResumeUploadScreen()),
-        AnyView(ReadingResumeScreen()), AnyView(ConfirmScreen()), AnyView(SearchingAScreen()),
-        AnyView(RevealAScreen()), AnyView(PaywallAScreen()), AnyView(QueueScreen()),
+        AnyView(ReadingResumeScreen()), AnyView(ConfirmScreen()), AnyView(SearchingScreen()),
+        AnyView(RevealScreen()), AnyView(PaywallScreen()), AnyView(QueueScreen()),
         AnyView(DashboardScreen())
     ]
     var body: some View {

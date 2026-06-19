@@ -1,7 +1,7 @@
 # Carl — iOS app
 
 Native SwiftUI implementation of the Claude Design handoff (`docs/Carl.dc.html`),
-all 18 screens, matching the brand: navy `#1B2A4A` + royal blue `#2563EB`,
+all 15 screens, matching the brand: navy `#1B2A4A` + royal blue `#2563EB`,
 Plus Jakarta Sans, and the briefcase-in-magnifier Carl mark.
 
 ## Run it
@@ -28,10 +28,10 @@ Carl/
     Components.swift       PhoneFrame, status bar, buttons, chips, etc.
   Screens/
     Screens_Onboarding.swift   01–05  Meet Carl → Confirm
-    Screens_MagicMoment.swift  06–09  Searching A/B → Reveal A/B
-    Screens_Paywall.swift      10–12  Paywall A/B + Buy-more sheet
-    Screens_Core.swift         13–16  Queue, Dashboard, Detail, Settings
-    Screens_Supporting.swift   17–18  All caught up, Push notification
+    Screens_MagicMoment.swift  06–07  Carl is searching → The reveal
+    Screens_Paywall.swift      08–09  Paywall + Buy-more sheet
+    Screens_Core.swift         10–13  Queue, Dashboard, Detail, Settings
+    Screens_Supporting.swift   14–15  All caught up, Push notification
 ```
 
 Each screen is rendered inside a fixed 402×872 `PhoneFrame` (notch, status bar,
