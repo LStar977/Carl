@@ -10,6 +10,9 @@ spending nights filling out the same form 300 times.
 
 - **`ios/`** — the native SwiftUI iOS app (all 15 screens). See
   [`ios/README.md`](ios/README.md) to build and run.
+- **`server/`** — the backend (résumé parsing, job discovery, matching, assisted
+  apply, credits, tracking). Zero dependencies; runs with mock data out of the
+  box. See [`server/README.md`](server/README.md).
 - **`docs/`** — product + design specs:
   - [`how-carl-works.md`](docs/how-carl-works.md) — full product spec (journey,
     apply-engine tiers, architecture, monetization).

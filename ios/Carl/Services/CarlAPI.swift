@@ -1,0 +1,183 @@
+import Foundation
+
+// MARK: - DTOs (mirror the backend JSON)
+
+struct UserDTO: Codable { let id: String; let name: String; let email: String; let credits: Int }
+struct AuthResponse: Codable { let token: String; let user: UserDTO }
+
+struct ParsedResume: Codable {
+    let targetRole: String
+    let years: Int
+    let seniority: String
+    let skills: [String]
+    let summary: String
+}
+
+struct JobPrefs: Codable {
+    var titles: [String]?
+    var locationType: String?   // remote | hybrid | onsite | any
+    var location: String?
+    var country: String?        // us | ca | uk | au
+    var payFloor: Int?
+    var workType: String?       // full-time | part-time | contract
+}
+
+struct SourceCount: Codable, Identifiable { let name: String; let found: Int; var id: String { name } }
+
+struct MatchDTO: Codable, Identifiable {
+    let matchId: String
+    let fit: Int
+    let reasons: [String]
+    let status: String
+    let title: String
+    let company: String
+    let detail: String
+    let location: String
+    let pay: String
+    let letter: String
+    let avatarColor: String
+    let tier: String
+    let source: String
+    var id: String { matchId }
+}
+
+struct SearchResponse: Codable {
+    let count: Int
+    let avgFit: Int
+    let sources: [SourceCount]
+    let topMatches: [MatchDTO]
+}
+
+struct QA: Codable { let question: String; let answer: String }
+struct Draft: Codable { let coverNote: String; let answers: [QA] }
+
+struct QueueItem: Codable, Identifiable {
+    let matchId: String
+    let applicationId: String
+    let fit: Int
+    let reasons: [String]
+    let title: String
+    let company: String
+    let detail: String
+    let letter: String
+    let avatarColor: String
+    let tier: String
+    let draft: Draft
+    var id: String { matchId }
+}
+struct QueueResponse: Codable { let credits: Int; let items: [QueueItem] }
+
+struct ConfirmResponse: Codable { let submitted: Bool; let credits: Int?; let mode: String? }
+
+struct ActivityDTO: Codable, Identifiable {
+    let id: String; let type: String; let dot: String; let text: String; let ts: String
+}
+struct DashboardResponse: Codable {
+    let appliedToday: Int
+    let totalApplied: Int
+    let responses: Int
+    let interviews: Int
+    let credits: Int
+    let activity: [ActivityDTO]
+}
+
+struct Pack: Codable, Identifiable {
+    let id: String; let name: String; let credits: Int
+    let applications: Int; let bonus: Int?; let price: Int; let priceText: String
+}
+struct CreditsResponse: Codable { let balance: Int; let packs: [Pack] }
+struct PurchaseResponse: Codable { let ok: Bool; let granted: Int?; let balance: Int? }
+
+// MARK: - API client
+
+enum CarlAPIError: Error { case http(Int), decoding, noToken }
+
+/// Talks to the Carl backend. Set `baseURL` to your server (defaults to the
+/// local dev server). Holds the auth token for the session.
+actor CarlAPI {
+    static let shared = CarlAPI()
+
+    /// For the simulator, `localhost` reaches your Mac's localhost. On a device,
+    /// point this at your machine's LAN IP or deployed server.
+    var baseURL = URL(string: "http://localhost:8787")!
+    private var token: String?
+
+    func setBaseURL(_ url: URL) { baseURL = url }
+
+    // Flow ---------------------------------------------------------------
+
+    @discardableResult
+    func authAnon() async throws -> AuthResponse {
+        let res: AuthResponse = try await request("POST", "/v1/auth/anon", auth: false)
+        token = res.token
+        return res
+    }
+
+    func updatePrefs(_ prefs: JobPrefs) async throws {
+        struct Body: Codable { let prefs: JobPrefs }
+        let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(prefs: prefs))
+    }
+
+    func parseResume(text: String) async throws -> ParsedResume {
+        struct Body: Codable { let text: String }
+        struct Wrap: Codable { let parsed: ParsedResume }
+        let w: Wrap = try await request("POST", "/v1/resume", body: Body(text: text))
+        return w.parsed
+    }
+
+    func search(prefs: JobPrefs? = nil) async throws -> SearchResponse {
+        struct Body: Codable { let prefs: JobPrefs? }
+        return try await request("POST", "/v1/search", body: Body(prefs: prefs))
+    }
+
+    func queue() async throws -> QueueResponse {
+        try await request("GET", "/v1/queue")
+    }
+
+    func confirm(matchId: String) async throws -> ConfirmResponse {
+        try await request("POST", "/v1/applications/\(matchId)/confirm")
+    }
+
+    func confirmAll() async throws -> ConfirmResponse {
+        try await request("POST", "/v1/applications/confirm-all")
+    }
+
+    func dashboard() async throws -> DashboardResponse {
+        try await request("GET", "/v1/dashboard")
+    }
+
+    func credits() async throws -> CreditsResponse {
+        try await request("GET", "/v1/credits")
+    }
+
+    func purchase(packId: String, receipt: String? = nil) async throws -> PurchaseResponse {
+        struct Body: Codable { let packId: String; let receipt: String? }
+        return try await request("POST", "/v1/credits/purchase", body: Body(packId: packId, receipt: receipt))
+    }
+
+    // Transport ----------------------------------------------------------
+
+    private struct EmptyAck: Codable {}
+
+    private func request<T: Decodable>(_ method: String, _ path: String, auth: Bool = true) async throws -> T {
+        try await request(method, path, body: Optional<EmptyAck>.none, auth: auth)
+    }
+
+    private func request<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B?, auth: Bool = true) async throws -> T {
+        var req = URLRequest(url: baseURL.appendingPathComponent(path))
+        req.httpMethod = method
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if auth {
+            guard let token else { throw CarlAPIError.noToken }
+            req.setValue(token, forHTTPHeaderField: "x-carl-token")
+        }
+        if let body { req.httpBody = try JSONEncoder().encode(body) }
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(code) else { throw CarlAPIError.http(code) }
+        if T.self == EmptyAck.self { return EmptyAck() as! T }
+        do { return try JSONDecoder().decode(T.self, from: data) }
+        catch { throw CarlAPIError.decoding }
+    }
+}
