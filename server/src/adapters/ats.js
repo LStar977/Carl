@@ -6,7 +6,7 @@
 // (US/Canada). Greenhouse & Lever carry the structured ids their apply adapters
 // need, so those jobs are Tier A (auto-apply); Ashby is Tier B (1-tap).
 import { fetchJSON, uid } from '../util.js';
-import { ATS_BOARDS } from '../data/boards.js';
+import { getBoards } from '../data/boards.js';
 
 const PER_BOARD_CAP = 100; // keep one giant board from dominating the results
 const CACHE_TTL_MS = 10 * 60 * 1000; // re-fetch a board at most every 10 min
@@ -32,7 +32,7 @@ const NON_NA = [
  * Search every seeded board in parallel and return normalised, market-filtered
  * jobs plus a per-source count. Network failures degrade to an empty list.
  */
-export async function searchATS(prefs, boards = ATS_BOARDS) {
+export async function searchATS(prefs, boards = getBoards()) {
   const tasks = [];
   for (const token of boards.greenhouse || []) tasks.push(fetchBoard('greenhouse', token));
   for (const token of boards.lever || []) tasks.push(fetchBoard('lever', token));
@@ -48,7 +48,7 @@ export async function searchATS(prefs, boards = ATS_BOARDS) {
  * ingestion worker. Runs a bounded concurrency pool so thousands of boards
  * don't fire at once. Returns the de-duplicated, US/Canada-market job universe.
  */
-export async function crawlAllBoards({ boards = ATS_BOARDS, concurrency = 20, onProgress } = {}) {
+export async function crawlAllBoards({ boards = getBoards(), concurrency = 20, onProgress } = {}) {
   const targets = [];
   for (const t of boards.greenhouse || []) targets.push(['greenhouse', t]);
   for (const t of boards.lever || []) targets.push(['lever', t]);

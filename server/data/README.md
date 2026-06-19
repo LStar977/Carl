@@ -56,3 +56,11 @@ npm run import-boards -- ./list.json --dry-run
 Then turn on the background worker (`INGEST_ENABLED=on`) and validate live
 coverage with `npm run ingest`. See `docs/job-sources-and-coverage.md` →
 "Scaling to Indeed-class volume".
+
+## Auto-growing the list (no manual runs)
+
+To have the roster grow on its own, set `BOARD_SOURCES` to one or more public
+crawl URLs (and `INGEST_ENABLED=on`). The server fetches them on startup and
+every `BOARD_REFRESH_HOURS` (default weekly), merges new tokens into the live
+list, and re-indexes — so the company count climbs without you running
+`import-boards`. Manual `import-boards` and auto-refresh can be used together.

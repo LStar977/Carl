@@ -42,6 +42,12 @@ export const config = {
   ingestIntervalMin: Number(process.env.INGEST_INTERVAL_MIN || 360),
   ingestConcurrency: Number(process.env.INGEST_CONCURRENCY || 20),
 
+  // Self-updating company roster: comma-separated public crawl URLs the server
+  // pulls on startup + every BOARD_REFRESH_HOURS, merging new tokens into the
+  // live list. Requires the ingestion worker to be on. Empty = manual only.
+  boardSources: (process.env.BOARD_SOURCES || '').split(',').map((s) => s.trim()).filter(Boolean),
+  boardRefreshHours: Number(process.env.BOARD_REFRESH_HOURS || 168),
+
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),
 

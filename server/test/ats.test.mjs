@@ -106,4 +106,31 @@ store.setJobIndex([], { at: null, count: 0, sources: [] }); // reset so we hit l
 const fallback = await searchJobs({ titles: ['Product Designer'] });
 ok(fallback.jobs.length > 0, 'empty index falls back to live/mock discovery');
 
+// --- Board import extraction (shared by CLI + auto-refresh) -----------------
+const { extractTokens } = await import('../src/data/board-import.js');
+const fromUrls = extractTokens(
+  'see https://boards.greenhouse.io/airbnb and https://jobs.lever.co/spotify and https://jobs.ashbyhq.com/openai',
+);
+ok(fromUrls.greenhouse.includes('airbnb'), 'extract greenhouse token from URL');
+ok(fromUrls.lever.includes('spotify'), 'extract lever token from URL');
+ok(fromUrls.ashby.includes('openai'), 'extract ashby token from URL');
+
+const fromObjs = extractTokens(JSON.stringify([
+  { ats: 'Greenhouse', slug: 'stripe' }, { platform: 'lever', token: 'palantir' },
+  { provider: 'workday', slug: 'skipme' },
+]));
+ok(fromObjs.greenhouse.includes('stripe') && fromObjs.lever.includes('palantir'), 'extract tokens from {ats,token} objects');
+ok(!Object.values(fromObjs).flat().includes('skipme'), 'unsupported ATS (workday) skipped');
+
+const bare = extractTokens('shopify\nwealthsimple\n!notatoken', 'greenhouse');
+ok(bare.greenhouse.length === 2, 'bare list + provider hint; junk line dropped');
+
+// --- Runtime roster growth (mergeBoards) ------------------------------------
+const { getBoards, mergeBoards } = await import('../src/data/boards.js');
+const start = getBoards().greenhouse.length;
+const r1 = mergeBoards({ greenhouse: ['airbnb', 'a-brand-new-co'] }); // airbnb already seeded
+ok(r1.after === r1.before + 1, 'mergeBoards adds only the new token (dedupes existing)');
+ok(getBoards().greenhouse.includes('a-brand-new-co'), 'roster reflects the added company live');
+ok(getBoards().greenhouse.length === start + 1, 'roster grew by exactly one');
+
 console.log(`\nats.test: ${n} checks passed`);

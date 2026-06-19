@@ -8,6 +8,7 @@ import { scoreMatches } from './services/match.js';
 import { classifyTier, draftApplication, submitApplication } from './services/apply.js';
 import { PACKS, balance, consume, purchase } from './services/credits.js';
 import { startIngestSchedule } from './services/ingest.js';
+import { startBoardRefreshSchedule } from './services/board-refresh.js';
 
 // ----- DTO helpers -------------------------------------------------------
 
@@ -249,4 +250,5 @@ function publicUser(u) { return { id: u.id, name: u.name, email: u.email, credit
 server.listen(config.port, () => {
   console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode} ingest=${config.ingestEnabled}`);
   startIngestSchedule();
+  startBoardRefreshSchedule();
 });

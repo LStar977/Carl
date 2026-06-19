@@ -54,6 +54,8 @@ function dedupe(arr) {
   return [...new Set(arr.filter(Boolean).map((s) => s.trim().toLowerCase()))];
 }
 
+const PROVIDERS = ['greenhouse', 'lever', 'ashby'];
+
 /** Built-in defaults merged with an optional external token file (ATS_BOARDS_PATH). */
 function load() {
   let ext = {};
@@ -69,4 +71,20 @@ function load() {
   };
 }
 
-export const ATS_BOARDS = load();
+// The live company roster. Mutable so the scheduled board refresher can grow it
+// at runtime; the ingestion worker reads it via getBoards() on each crawl.
+let current = load();
+const count = (b) => PROVIDERS.reduce((n, p) => n + (b[p]?.length || 0), 0);
+
+export function getBoards() { return current; }
+
+/** Union new tokens into the live roster; returns before/after totals. */
+export function mergeBoards(partial) {
+  const before = count(current);
+  current = {
+    greenhouse: dedupe([...current.greenhouse, ...(partial.greenhouse || [])]),
+    lever: dedupe([...current.lever, ...(partial.lever || [])]),
+    ashby: dedupe([...current.ashby, ...(partial.ashby || [])]),
+  };
+  return { before, after: count(current) };
+}
