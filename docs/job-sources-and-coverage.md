@@ -148,8 +148,10 @@ apply. Carl optimises for **appliable** jobs instead. Two levers:
    costs money and those jobs are mostly Tier B (redirect, not auto-apply).
 
 City filtering already works across all sources (`services/match.js`): remote
-roles are always eligible; onsite/hybrid roles must match the user's city (with
-metro aliases, e.g. Toronto/GTA).
+roles are always eligible; onsite/hybrid roles must match the user's city. Any
+US/Canada city matches by name; the top ~50 metros also match nicknames and
+metro-area phrasings (Toronto⇄GTA, San Francisco⇄Bay Area, New York⇄NYC, etc.),
+with token-safe matching so short aliases (dc, kw) don't false-match.
 
 ## Pre-launch to-dos this surfaces
 - **Grow the ATS token list** (`server/src/data/boards.js`) — the free,

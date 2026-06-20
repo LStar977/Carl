@@ -87,6 +87,20 @@ ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
 const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
 ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');
 
+// --- Expanded metro matching (top ~50 metros) -------------------------------
+const metroJobs = [
+  { id: 'sf1', title: 'Product Designer', location: 'San Francisco, CA', remoteType: 'onsite', payFloor: 0 },
+  { id: 'ba1', title: 'Product Designer', location: 'Bay Area', remoteType: 'onsite', payFloor: 0 },
+  { id: 'dc1', title: 'Product Designer', location: 'Washington, DC', remoteType: 'onsite', payFloor: 0 },
+  { id: 'atl', title: 'Product Designer', location: 'Atlanta, GA', remoteType: 'onsite', payFloor: 0 },
+];
+const pick = (loc) => scoreMatches({}, { titles: ['Product Designer'], location: loc, locationType: 'onsite' }, metroJobs).map((j) => j.id);
+ok(pick('San Francisco').includes('sf1') && pick('San Francisco').includes('ba1'), 'San Francisco matches city + "Bay Area"');
+ok(pick('sf').includes('sf1'), 'nickname "sf" reverse-maps to San Francisco');
+ok(pick('gta')?.length === 0, 'unrelated metro (gta) matches none of these');
+ok(pick('Washington').includes('dc1'), 'Washington matches "Washington, DC"');
+ok(!pick('la').includes('atl'), 'token-safe: "la" does NOT false-match inside "Atlanta"');
+
 // --- Ingestion index: searchJobs prefers the index when populated -----------
 const { store } = await import('../src/store.js');
 const { searchJobs } = await import('../src/services/jobs.js');

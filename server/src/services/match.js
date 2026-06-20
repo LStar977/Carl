@@ -23,21 +23,64 @@ function isEligible(prefs, job, floor) {
   return true;
 }
 
-// Common metro aliases so "Toronto" matches "GTA", "San Francisco" matches "SF",
-// etc. Keys are lowercase city names; values are substrings to look for.
+// Metro aliases so nicknames / metro-area phrasings match (e.g. "Toronto"⇄"GTA",
+// "San Francisco"⇄"Bay Area", "New York"⇄"NYC"). Keys are canonical lowercase
+// city names; the user can also type any alias (reverse-looked-up below). Covers
+// the top ~50 US + Canada metros; any other city still matches by its own name.
 const METRO_ALIASES = {
-  toronto: ['toronto', 'gta'],
-  vancouver: ['vancouver'],
+  // United States
+  'new york': ['new york', 'nyc', 'new york city', 'manhattan', 'brooklyn'],
+  'los angeles': ['los angeles', 'socal'],
+  chicago: ['chicago', 'chicagoland'],
+  'san francisco': ['san francisco', 'sf', 'sf bay', 'bay area'],
+  'san jose': ['san jose', 'bay area', 'silicon valley'],
+  seattle: ['seattle', 'bellevue', 'redmond'],
+  boston: ['boston', 'cambridge'],
+  austin: ['austin', 'atx'],
+  'washington': ['washington', 'washington dc', 'dc', 'd.c.'],
+  dallas: ['dallas', 'dfw', 'fort worth'],
+  houston: ['houston'],
+  atlanta: ['atlanta', 'atl'],
+  miami: ['miami', 'south florida'],
+  philadelphia: ['philadelphia', 'philly'],
+  phoenix: ['phoenix', 'tempe', 'scottsdale'],
+  'san diego': ['san diego'],
+  denver: ['denver', 'boulder'],
+  minneapolis: ['minneapolis', 'twin cities', 'st paul', 'saint paul'],
+  detroit: ['detroit'],
+  portland: ['portland'],
+  'las vegas': ['las vegas', 'vegas'],
+  nashville: ['nashville'],
+  charlotte: ['charlotte'],
+  tampa: ['tampa'],
+  orlando: ['orlando'],
+  pittsburgh: ['pittsburgh'],
+  sacramento: ['sacramento'],
+  'salt lake city': ['salt lake city', 'slc'],
+  raleigh: ['raleigh', 'durham', 'research triangle', 'rtp'],
+  columbus: ['columbus'],
+  indianapolis: ['indianapolis', 'indy'],
+  'kansas city': ['kansas city'],
+  cleveland: ['cleveland'],
+  'san antonio': ['san antonio'],
+  'st louis': ['st louis', 'saint louis'],
+  // Canada
+  toronto: ['toronto', 'gta', 'greater toronto'],
   montreal: ['montreal', 'montréal'],
-  ottawa: ['ottawa'],
-  calgary: ['calgary'],
-  'san francisco': ['san francisco', 'sf bay', 'bay area'],
-  'new york': ['new york', 'nyc', 'new york city'],
-  'los angeles': ['los angeles'],
-  seattle: ['seattle'],
-  austin: ['austin'],
-  boston: ['boston'],
-  chicago: ['chicago'],
+  vancouver: ['vancouver', 'burnaby', 'richmond'],
+  calgary: ['calgary', 'yyc'],
+  edmonton: ['edmonton'],
+  ottawa: ['ottawa', 'gatineau'],
+  winnipeg: ['winnipeg'],
+  'quebec city': ['quebec city', 'québec'],
+  hamilton: ['hamilton'],
+  kitchener: ['kitchener', 'waterloo', 'kitchener-waterloo', 'kw'],
+  london: ['london ontario', 'london, on'],
+  halifax: ['halifax'],
+  victoria: ['victoria'],
+  saskatoon: ['saskatoon'],
+  regina: ['regina'],
+  mississauga: ['mississauga', 'gta', 'greater toronto'],
 };
 
 /**
@@ -57,9 +100,18 @@ function locationEligible(prefs, job) {
   return cityMatches(city, loc);
 }
 
+/** Aliases for a city the user typed — by canonical key or reverse alias match. */
+function aliasesFor(city) {
+  if (METRO_ALIASES[city]) return METRO_ALIASES[city];
+  for (const al of Object.values(METRO_ALIASES)) if (al.includes(city)) return al;
+  return [city];
+}
+
 function cityMatches(city, loc) {
-  const aliases = METRO_ALIASES[city] || [city];
-  return aliases.some((a) => loc.includes(a));
+  const tokens = new Set(loc.split(/[^a-z0-9]+/).filter(Boolean));
+  // Single-word aliases match whole tokens (so "dc"/"kw" can't match inside
+  // another word); multi-word aliases match as a phrase.
+  return aliasesFor(city).some((a) => (a.includes(' ') ? loc.includes(a) : tokens.has(a)));
 }
 
 function heuristicFit(parsed, wantTitle, job) {
