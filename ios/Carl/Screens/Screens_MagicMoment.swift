@@ -29,12 +29,14 @@ struct MatchCard: View {
 /// fast-then-settle "13 → 45 → 127 → 268 → 312" feel.
 struct CountUp: View, Animatable {
     var value: Double
+    var prefix: String = ""
+    var suffix: String = ""
     var animatableData: Double {
         get { value }
         set { value = newValue }
     }
     var body: some View {
-        Text("\(Int(value.rounded()))").monospacedDigit()
+        Text("\(prefix)\(Int(value.rounded()))\(suffix)").monospacedDigit()
     }
 }
 

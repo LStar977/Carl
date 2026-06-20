@@ -306,6 +306,7 @@ struct DashboardScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.home)
     var onOpenDetail: () -> Void = {}
     @Environment(CarlStore.self) private var store
+    @State private var appliedShown = 0
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.screenBG
@@ -330,10 +331,19 @@ struct DashboardScreen: View {
                         ZStack(alignment: .topTrailing) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("Today").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
-                                Text("Carl applied to \(store.dashboard?.appliedToday ?? 0) jobs").carl(40, .heavy).foregroundStyle(.white)
+                                CountUp(value: Double(appliedShown), prefix: "Carl applied to ", suffix: " jobs")
+                                    .carlFont(40, .heavy).foregroundStyle(.white)
                                     .padding(.top, 4)
                                     .padding(.trailing, 60) // clear the mascot in the corner
                                     .fixedSize(horizontal: false, vertical: true)
+                                    .onAppear {
+                                        if let v = store.dashboard?.appliedToday {
+                                            withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
+                                        }
+                                    }
+                                    .onChange(of: store.dashboard?.appliedToday ?? 0) { _, v in
+                                        withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
+                                    }
                                 Text("Nice work resting while Carl hustled.")
                                     .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
                                     .padding(.top, 8)
