@@ -57,6 +57,16 @@ try {
   console.log('\nSearch & reveal');
   const search = await api('POST', '/v1/search', {});
   check('search returns a job count', search.json.count > 0, `count=${search.json.count}`);
+
+  // Blocklist: block a company that appears in results, re-search, expect it gone.
+  const blockCo = search.json.topMatches?.[0]?.company;
+  if (blockCo) {
+    await api('POST', '/v1/blocklist', { company: blockCo });
+    const reSearch = await api('POST', '/v1/search', {});
+    const stillThere = reSearch.json.topMatches?.some((m) => m.company === blockCo);
+    check('blocked company removed from search', !stillThere, `blocked=${blockCo}`);
+    await api('POST', '/v1/blocklist', { company: blockCo, remove: true }); // unblock for rest of flow
+  }
   check('search returns avgFit', search.json.avgFit > 0, `avgFit=${search.json.avgFit}`);
   check('search returns 3 top matches', search.json.topMatches?.length === 3);
   check('top match has fit + company', !!search.json.topMatches?.[0]?.fit && !!search.json.topMatches?.[0]?.company);

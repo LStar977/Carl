@@ -4,7 +4,7 @@ import { store } from './store.js';
 import { sendJSON, readBody, uid, nowISO } from './util.js';
 import { parseResume } from './services/resume.js';
 import { searchJobs } from './services/jobs.js';
-import { scoreMatches } from './services/match.js';
+import { scoreMatches, blockedSet } from './services/match.js';
 import { classifyTier, draftApplication, submitApplication } from './services/apply.js';
 import { PACKS, balance, consume, purchase } from './services/credits.js';
 import { startIngestSchedule } from './services/ingest.js';
@@ -53,7 +53,19 @@ route('POST', '/v1/auth/anon', async () => {
 
 route('GET', '/v1/profile', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { prefs: {}, resume: null };
-  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null, contact: contactOf(ctx.user), eligibility: p.eligibility || null } };
+  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null, contact: contactOf(ctx.user), eligibility: p.eligibility || null, blockedCompanies: p.blockedCompanies || [] } };
+});
+
+// Block / unblock a company so Carl never applies there (current employer, etc.).
+route('POST', '/v1/blocklist', async (ctx) => {
+  const p = store.getProfile(ctx.user.id) || { userId: ctx.user.id, prefs: {}, resume: null };
+  const company = String(ctx.body?.company || '').trim();
+  if (!company) return { status: 400, body: { error: 'no_company' } };
+  const list = (p.blockedCompanies || []).filter((c) => c.toLowerCase() !== company.toLowerCase());
+  if (!ctx.body.remove) list.push(company);
+  p.blockedCompanies = list;
+  store.saveProfile(p);
+  return { status: 200, body: { blockedCompanies: p.blockedCompanies } };
 });
 
 route('PUT', '/v1/profile', async (ctx) => {
@@ -115,7 +127,11 @@ route('POST', '/v1/search', async (ctx) => {
 
 route('GET', '/v1/queue', async (ctx) => {
   const matches = store.getMatches(ctx.user.id);
-  const ready = matches.filter((m) => m.status === 'suggested' || m.status === 'ready').slice(0, 14);
+  const blocked = blockedSet(store.getProfile(ctx.user.id));
+  const ready = matches
+    .filter((m) => m.status === 'suggested' || m.status === 'ready')
+    .filter((m) => !blocked.has((m.job.company || '').toLowerCase()))
+    .slice(0, 14);
   const items = [];
   for (const m of ready) {
     let app = store.getApplications(ctx.user.id).find((a) => a.matchId === m.id);
@@ -186,6 +202,9 @@ route('POST', '/v1/credits/purchase', async (ctx) => {
 async function confirmOne(ctx, matchId) {
   const m = store.getMatch(ctx.user.id, matchId);
   if (!m) return { status: 404, body: { error: 'match_not_found' } };
+  if (blockedSet(store.getProfile(ctx.user.id)).has((m.job.company || '').toLowerCase())) {
+    return { status: 200, body: { submitted: false, skipped: true, reason: 'company_blocked', credits: balance(ctx.user) } };
+  }
   if (balance(ctx.user) <= 0) return { status: 402, body: { error: 'no_credits', credits: 0 } };
 
   let app = store.getApplications(ctx.user.id).find((a) => a.matchId === matchId);

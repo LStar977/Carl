@@ -106,6 +106,8 @@ struct Pack: Codable, Identifiable {
 }
 struct CreditsResponse: Codable { let balance: Int; let packs: [Pack] }
 struct PurchaseResponse: Codable { let ok: Bool; let granted: Int?; let balance: Int? }
+struct BlocklistResponse: Codable { let blockedCompanies: [String] }
+struct ProfileResponse: Codable { let blockedCompanies: [String]? }
 
 // MARK: - API client
 
@@ -149,11 +151,21 @@ actor CarlAPI {
         let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(eligibility: eligibility))
     }
 
+    /// Block (or unblock) a company so Carl never applies there.
+    func blockCompany(_ company: String, remove: Bool = false) async throws -> BlocklistResponse {
+        struct Body: Codable { let company: String; let remove: Bool }
+        return try await request("POST", "/v1/blocklist", body: Body(company: company, remove: remove))
+    }
+
     func parseResume(text: String) async throws -> ParsedResume {
         struct Body: Codable { let text: String }
         struct Wrap: Codable { let parsed: ParsedResume }
         let w: Wrap = try await request("POST", "/v1/resume", body: Body(text: text))
         return w.parsed
+    }
+
+    func profile() async throws -> ProfileResponse {
+        try await request("GET", "/v1/profile")
     }
 
     func search(prefs: JobPrefs? = nil) async throws -> SearchResponse {

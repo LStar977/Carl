@@ -71,6 +71,22 @@ final class CarlStore {
     /// Persist the screening answers Carl uses on applications.
     func saveEligibility() async { try? await api.updateEligibility(eligibility) }
 
+    /// Companies Carl will never apply to (e.g. the user's current employer).
+    var blockedCompanies: [String] = []
+
+    func block(_ company: String) async {
+        if let r = try? await api.blockCompany(company) { blockedCompanies = r.blockedCompanies }
+        await loadQueue()
+    }
+
+    func unblock(_ company: String) async {
+        if let r = try? await api.blockCompany(company, remove: true) { blockedCompanies = r.blockedCompanies }
+    }
+
+    func loadBlocklist() async {
+        if let r = try? await api.profile() { blockedCompanies = r.blockedCompanies ?? [] }
+    }
+
     func runSearch() async {
         search = try? await api.search(prefs: prefs)
     }

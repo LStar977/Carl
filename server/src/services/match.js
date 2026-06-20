@@ -6,6 +6,7 @@ export function scoreMatches(profile, prefs, jobs) {
   const parsed = profile?.resume?.parsed || {};
   const wantTitle = (prefs?.titles?.[0] || parsed.targetRole || '').toLowerCase();
   const floor = Number(prefs?.payFloor || 0);
+  const blocked = blockedSet(profile);
 
   return jobs
     .map((job) => {
@@ -13,8 +14,13 @@ export function scoreMatches(profile, prefs, jobs) {
       const fit = heuristicFit(parsed, wantTitle, job);
       return { ...job, fit, eligible, reasons: reasonsFor(parsed, prefs, job, fit) };
     })
-    .filter((j) => j.eligible)
+    .filter((j) => j.eligible && !blocked.has((j.company || '').toLowerCase()))
     .sort((a, b) => b.fit - a.fit);
+}
+
+/** Lowercased set of companies the user never wants Carl to apply to. */
+export function blockedSet(profile) {
+  return new Set((profile?.blockedCompanies || []).map((c) => String(c).toLowerCase()));
 }
 
 function isEligible(prefs, job, floor) {

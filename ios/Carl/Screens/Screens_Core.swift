@@ -192,6 +192,15 @@ struct QueueScreen: View {
         .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xD5E1FB), lineWidth: 1.5))
         .carlCardShadow(0.08, radius: 20, y: 6)
+        .contextMenu { blockButton(item) }
+    }
+
+    @ViewBuilder private func blockButton(_ item: QueueItem) -> some View {
+        Button(role: .destructive) {
+            Task { await store.block(item.company) }
+        } label: {
+            Label("Don't apply to \(item.company)", systemImage: "hand.raised.fill")
+        }
     }
 
     private func draftBox(label: String, text: String) -> some View {
@@ -230,6 +239,7 @@ struct QueueScreen: View {
         .padding(16)
         .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .carlCardShadow(0.06)
+        .contextMenu { blockButton(item) }
     }
 }
 
@@ -565,6 +575,32 @@ struct SettingsScreen: View {
                         SettingsRow(color: CarlColor.lever, title: "Pay floor", value: "$130k")
                     }
 
+                    settingsGroup("Won't apply to") {
+                        if store.blockedCompanies.isEmpty {
+                            Text("Long-press a job in the queue to block a company — e.g. your current employer. Carl never applies there.")
+                                .carl(13, .medium).foregroundStyle(CarlColor.textSoft)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16).padding(.vertical, 14)
+                        } else {
+                            ForEach(Array(store.blockedCompanies.enumerated()), id: \.offset) { idx, company in
+                                if idx > 0 { Divider().overlay(CarlColor.hairline).padding(.leading, 58) }
+                                HStack(spacing: 12) {
+                                    Image(systemName: "hand.raised.fill").font(.system(size: 13, weight: .semibold)).foregroundStyle(CarlColor.red)
+                                        .frame(width: 30, height: 30)
+                                        .background(CarlColor.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                                    Text(company).carl(15, .semibold).foregroundStyle(CarlColor.navy)
+                                    Spacer()
+                                    Button { Task { await store.unblock(company) } } label: {
+                                        Image(systemName: "xmark.circle.fill").font(.system(size: 18)).foregroundStyle(CarlColor.textFaint)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 16).padding(.vertical, 12)
+                            }
+                        }
+                    }
+
                     settingsGroup("Carl") {
                         HStack(spacing: 12) {
                             RoundedRectangle(cornerRadius: 8).fill(CarlColor.navy).frame(width: 30, height: 30)
@@ -590,7 +626,7 @@ struct SettingsScreen: View {
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
-        .task { await store.refreshCredits() }
+        .task { await store.refreshCredits(); await store.loadBlocklist() }
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallScreen(onPurchase: { showPaywall = false })
                 .environment(store)
