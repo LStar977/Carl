@@ -82,6 +82,7 @@ struct QueueItem: Codable, Identifiable {
     let avatarColor: String
     let tier: String
     let draft: Draft
+    var tailored: Bool? = nil
     var id: String { matchId }
 }
 struct QueueResponse: Codable { let credits: Int; let items: [QueueItem] }
@@ -175,6 +176,12 @@ actor CarlAPI {
 
     func queue() async throws -> QueueResponse {
         try await request("GET", "/v1/queue")
+    }
+
+    /// Generate a résumé tailored to this job (charged +1 credit on submit).
+    func tailorResume(matchId: String) async throws {
+        struct R: Codable { let tailored: Bool }
+        let _: R = try await request("POST", "/v1/applications/\(matchId)/tailor-resume")
     }
 
     func confirm(matchId: String, coverNote: String? = nil) async throws -> ConfirmResponse {

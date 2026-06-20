@@ -168,6 +168,8 @@ struct QueueScreen: View {
                 Rectangle().fill(CarlColor.hairlineCool).frame(height: 1)
             }
 
+            tailorRow(item)
+
             HStack(spacing: 10) {
                 Button { editingItem = item } label: {
                     Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundStyle(CarlColor.royal)
@@ -177,11 +179,12 @@ struct QueueScreen: View {
                 }
                 .buttonStyle(.plain)
                 Button {
-                    if store.credits <= 0 { showPaywall = true }
+                    let cost = item.tailored == true ? 2 : 1
+                    if store.credits < cost { showPaywall = true }
                     else { Task { await store.confirm(item.matchId) } }
                 } label: {
                     CarlButton(title: item.tier == "A" ? "Confirm & submit" : "Review & send",
-                               trailingNote: "· 1 credit", height: 48, glow: false)
+                               trailingNote: item.tailored == true ? "· 2 credits" : "· 1 credit", height: 48, glow: false)
                         .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
                 }
                 .buttonStyle(.plain)
@@ -200,6 +203,40 @@ struct QueueScreen: View {
             Task { await store.block(item.company) }
         } label: {
             Label("Don't apply to \(item.company)", systemImage: "hand.raised.fill")
+        }
+    }
+
+    /// Premium "tailor my résumé to this job" affordance (+1 credit on submit).
+    @ViewBuilder private func tailorRow(_ item: QueueItem) -> some View {
+        if item.tailored == true {
+            HStack(spacing: 7) {
+                Image(systemName: "sparkles").font(.system(size: 13, weight: .semibold)).foregroundStyle(CarlColor.greenDeep)
+                Text("Résumé tailored to this job").carl(12.5, .bold).foregroundStyle(CarlColor.greenDeep)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 11).padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .padding(.top, 10)
+        } else {
+            Button { Task { await store.tailorResume(item.matchId) } } label: {
+                HStack(spacing: 7) {
+                    if store.tailoring.contains(item.matchId) {
+                        SpinnerRing(size: 14)
+                    } else {
+                        Image(systemName: "sparkles").font(.system(size: 13, weight: .semibold)).foregroundStyle(CarlColor.royal)
+                    }
+                    Text("Tailor my résumé to this job").carl(12.5, .bold).foregroundStyle(CarlColor.royal)
+                    Spacer(minLength: 0)
+                    Text("+1 credit").carl(11, .bold).foregroundStyle(CarlColor.textFaint)
+                }
+                .padding(.horizontal, 11).padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: 0xD5E1FB), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 10)
         }
     }
 

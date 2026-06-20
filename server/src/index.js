@@ -5,7 +5,7 @@ import { sendJSON, readBody, uid, nowISO } from './util.js';
 import { parseResume } from './services/resume.js';
 import { searchJobs } from './services/jobs.js';
 import { scoreMatches, blockedSet } from './services/match.js';
-import { classifyTier, draftApplication, submitApplication } from './services/apply.js';
+import { classifyTier, draftApplication, submitApplication, tailorResume } from './services/apply.js';
 import { PACKS, balance, consume, purchase } from './services/credits.js';
 import { startIngestSchedule } from './services/ingest.js';
 import { startBoardRefreshSchedule } from './services/board-refresh.js';
@@ -143,9 +143,28 @@ route('GET', '/v1/queue', async (ctx) => {
       });
       m.status = 'ready'; m.applicationId = app.id; store.updateMatch(ctx.user.id, m);
     }
-    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft });
+    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, tailored: !!app.tailored });
   }
   return { status: 200, body: { credits: balance(ctx.user), items } };
+});
+
+// Tailor the résumé to a specific job (premium — charged +1 credit on submit).
+route('POST', '/v1/applications/:matchId/tailor-resume', async (ctx) => {
+  const m = store.getMatch(ctx.user.id, ctx.params.matchId);
+  if (!m) return { status: 404, body: { error: 'match_not_found' } };
+  let app = store.getApplications(ctx.user.id).find((a) => a.matchId === ctx.params.matchId);
+  if (!app) {
+    const draft = await draftApplication(store.getProfile(ctx.user.id), m.job);
+    app = store.upsertApplication({ id: uid('app'), userId: ctx.user.id, matchId: ctx.params.matchId, jobId: m.job.id, tier: classifyTier(m.job), draft, status: 'ready', createdAt: nowISO(), history: [] });
+  }
+  if (ctx.body?.off) {
+    app.tailored = false; app.tailoredResume = undefined;
+  } else {
+    app.tailoredResume = await tailorResume(store.getProfile(ctx.user.id), m.job);
+    app.tailored = true;
+  }
+  store.upsertApplication(app);
+  return { status: 200, body: { tailored: !!app.tailored } };
 });
 
 route('POST', '/v1/applications/:matchId/confirm', async (ctx) => {
@@ -216,6 +235,10 @@ async function confirmOne(ctx, matchId) {
     return { status: 200, body: { submitted: true, already: true, credits: balance(ctx.user) } };
   }
 
+  // A tailored-résumé application costs 2 credits (the +1 premium); standard is 1.
+  const cost = app.tailored ? 2 : 1;
+  if (balance(ctx.user) < cost) return { status: 402, body: { error: 'no_credits', credits: balance(ctx.user) } };
+
   // Apply any edits the user made to the cover note before it's sent.
   const edit = ctx.body || {};
   if (typeof edit.coverNote === 'string' && edit.coverNote.trim()) {
@@ -223,10 +246,13 @@ async function confirmOne(ctx, matchId) {
     store.upsertApplication(app);
   }
 
-  const result = await submitApplication({ user: ctx.user, profile: store.getProfile(ctx.user.id), job: m.job, draft: app.draft });
+  const result = await submitApplication({
+    user: ctx.user, profile: store.getProfile(ctx.user.id), job: m.job, draft: app.draft,
+    resumeText: app.tailored ? app.tailoredResume : undefined,
+  });
   if (!result.submitted) return { status: 502, body: { error: 'submit_failed', detail: result.error } };
 
-  consume(ctx.user, 1);
+  consume(ctx.user, cost);
   app.status = 'applied';
   app.submittedAt = nowISO();
   app.history = [{ at: app.submittedAt, status: 'applied', mode: result.mode }];

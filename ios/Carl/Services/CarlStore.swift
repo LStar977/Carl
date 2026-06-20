@@ -118,6 +118,17 @@ final class CarlStore {
 
     /// Per-application edits to the cover note, keyed by matchId (applied on send).
     var draftEdits: [String: String] = [:]
+    /// Match ids whose résumé is currently being tailored (for in-progress UI).
+    var tailoring: Set<String> = []
+
+    /// Tailor the résumé to a job (premium, +1 credit on submit).
+    func tailorResume(_ matchId: String) async {
+        tailoring.insert(matchId)
+        try? await api.tailorResume(matchId: matchId)
+        await loadQueue()
+        tailoring.remove(matchId)
+        Haptics.success()
+    }
 
     func confirm(_ matchId: String) async {
         if let r = try? await api.confirm(matchId: matchId, coverNote: draftEdits[matchId]) {

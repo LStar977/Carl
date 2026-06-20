@@ -77,32 +77,36 @@ try {
   check('queue has prepared items', queue.json.items?.length > 0, `items=${queue.json.items?.length}`);
   check('queue item has a drafted cover note', !!queue.json.items?.[0]?.draft?.coverNote);
 
+  console.log('\nTailored résumé (+1 credit)');
+  const m1 = queue.json.items[0].matchId;
+  const m2 = queue.json.items[1].matchId;
+  const m3 = queue.json.items[2].matchId;
+  await api('POST', `/v1/applications/${m2}/tailor-resume`);
+  const qT = await api('GET', '/v1/queue');
+  check('tailored résumé flagged on the queue item', qT.json.items.find((i) => i.matchId === m2)?.tailored === true);
+
   console.log('\nConfirm & credits');
-  const firstMatch = queue.json.items[0].matchId;
-  const confirm = await api('POST', `/v1/applications/${firstMatch}/confirm`, { coverNote: 'My edited cover note.' });
-  check('confirm submits', confirm.json.submitted === true, JSON.stringify(confirm.json));
-  check('credit consumed (3 → 2)', confirm.json.credits === 2, `credits=${confirm.json.credits}`);
-  const appDetail = await api('GET', `/v1/applications/${firstMatch}`);
+  const confirm = await api('POST', `/v1/applications/${m1}/confirm`, { coverNote: 'My edited cover note.' });
+  check('standard apply submits + consumes 1 credit (3 → 2)', confirm.json.submitted === true && confirm.json.credits === 2, JSON.stringify(confirm.json));
+  const appDetail = await api('GET', `/v1/applications/${m1}`);
   check('edited cover note was saved on the application', appDetail.json.application?.draft?.coverNote === 'My edited cover note.', JSON.stringify(appDetail.json.application?.draft));
 
-  // exhaust remaining credits, then hit the paywall
-  const q2 = await api('GET', '/v1/queue');
-  await api('POST', `/v1/applications/${q2.json.items[0].matchId}/confirm`);
-  await api('POST', `/v1/applications/${q2.json.items[1].matchId}/confirm`);
-  const q3 = await api('GET', '/v1/queue');
-  const broke = await api('POST', `/v1/applications/${q3.json.items[0].matchId}/confirm`);
+  const confirmTailored = await api('POST', `/v1/applications/${m2}/confirm`);
+  check('tailored apply consumes 2 credits (2 → 0)', confirmTailored.json.submitted === true && confirmTailored.json.credits === 0, JSON.stringify(confirmTailored.json));
+
+  const broke = await api('POST', `/v1/applications/${m3}/confirm`);
   check('paywall at 0 credits (402)', broke.status === 402, `status=${broke.status}`);
 
   console.log('\nPurchase & dashboard');
   const buy = await api('POST', '/v1/credits/purchase', { packId: 'popular' });
   check('purchase grants 110 credits', buy.json.granted === 110, JSON.stringify(buy.json));
   const dash = await api('GET', '/v1/dashboard');
-  check('dashboard counts applied', dash.json.totalApplied === 3, `applied=${dash.json.totalApplied}`);
-  check('dashboard has activity feed', dash.json.activity?.length >= 3);
+  check('dashboard counts applied', dash.json.totalApplied === 2, `applied=${dash.json.totalApplied}`);
+  check('dashboard has activity feed', dash.json.activity?.length >= 2);
   check('dashboard shows credits', dash.json.credits === 110, `credits=${dash.json.credits}`);
 
   console.log('\nApplication detail');
-  const detail = await api('GET', `/v1/applications/${firstMatch}`);
+  const detail = await api('GET', `/v1/applications/${m1}`);
   check('detail returns submitted application', detail.json.application?.status === 'applied');
 
   console.log(`\n${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed\n`);

@@ -28,6 +28,24 @@ export async function draftApplication(profile, job) {
   return drafted || templateDraft(parsed, job);
 }
 
+/** Rewrite the user's résumé to emphasise what's relevant to a specific job.
+ *  Premium feature (+1 credit). Stays truthful; falls back to the base résumé. */
+export async function tailorResume(profile, job) {
+  const base = profile?.resume?.rawText || '';
+  const parsed = profile?.resume?.parsed || {};
+  const out = await llmJSON({
+    system: 'You tailor a résumé to a specific job while staying strictly truthful. Respond with JSON only.',
+    prompt:
+      `Base résumé:\n"""${base.slice(0, 6000)}"""\n\n` +
+      `Target job: ${job.title} at ${job.company}. ${job.descriptionSnippet}\n\n` +
+      'Rewrite the résumé to surface the most relevant experience, skills and keywords ' +
+      'for this job. Do NOT invent experience, employers, or dates. Keep it realistic and concise. ' +
+      'Return JSON {"resume": string}.',
+    maxTokens: 1200,
+  });
+  return out?.resume || base || `${parsed.targetRole || 'Candidate'} — ${(parsed.skills || []).join(', ')}`;
+}
+
 /** Summarise the screening answers Carl actually knows, for the draft prompt. */
 function eligibilityFacts(e) {
   const f = [];
@@ -59,9 +77,10 @@ function templateDraft(parsed, job) {
  * without contacting an employer. In live mode, Tier-A jobs are submitted via
  * their ATS API; Tier-B remains assisted (recorded as submitted by the user).
  */
-export async function submitApplication({ user, profile, job, draft }) {
+export async function submitApplication({ user, profile, job, draft, resumeText }) {
   const tier = classifyTier(job);
   const applicant = applicantFrom(user, profile);
+  const resume = resumeText || profile?.resume?.rawText;
 
   if (config.applyMode !== 'live') {
     return { submitted: true, mode: 'dry-run', tier, reference: `dry_${job.externalId}` };
@@ -80,7 +99,7 @@ export async function submitApplication({ user, profile, job, draft }) {
       apiKey: job.greenhouse.apiKey,
       applicant,
       coverNote: draft.coverNote,
-      resumeText: profile?.resume?.rawText,
+      resumeText: resume,
     });
     return { submitted: r.ok, mode: 'live', tier, reference: r.reference, error: r.error };
   }
