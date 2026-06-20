@@ -95,8 +95,8 @@ struct ActivityDTO: Codable, Identifiable {
 struct DashboardResponse: Codable {
     let appliedToday: Int
     let totalApplied: Int
-    let responses: Int
-    let interviews: Int
+    let autoApplied: Int
+    let avgFit: Int
     let credits: Int
     let activity: [ActivityDTO]
 }

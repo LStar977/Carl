@@ -208,13 +208,16 @@ route('GET', '/v1/dashboard', async (ctx) => {
   const apps = store.getApplications(ctx.user.id);
   const submitted = apps.filter((a) => a.status === 'submitted' || a.status === 'applied');
   const today = new Date().toISOString().slice(0, 10);
+  // Stats Carl actually knows (replies go to the user's email, not tracked here):
+  // how many were auto-applied via official ATS APIs, and the average fit.
+  const fits = submitted.map((a) => store.getMatch(ctx.user.id, a.matchId)?.fit).filter((f) => typeof f === 'number');
   return {
     status: 200,
     body: {
       appliedToday: submitted.filter((a) => (a.submittedAt || '').slice(0, 10) === today).length,
       totalApplied: submitted.length,
-      responses: apps.filter((a) => ['responded', 'interview'].includes(a.status)).length,
-      interviews: apps.filter((a) => a.status === 'interview').length,
+      autoApplied: submitted.filter((a) => a.tier === 'A').length,
+      avgFit: fits.length ? Math.round(fits.reduce((s, f) => s + f, 0) / fits.length) : 0,
       credits: balance(ctx.user),
       activity: store.getActivity(ctx.user.id).slice(0, 12),
     },

@@ -201,9 +201,9 @@ final class CarlStore {
             topMatches: sampleMatches)
         s.queue = sampleQueue
         s.dashboard = DashboardResponse(
-            appliedToday: 47, totalApplied: 218, responses: 19, interviews: 4, credits: 102,
+            appliedToday: 47, totalApplied: 218, autoApplied: 156, avgFit: 88, credits: 102,
             activity: [
-                ActivityDTO(id: "1", type: "responded", dot: "green", text: "Acme replied to your application", ts: "1h"),
+                ActivityDTO(id: "1", type: "applied", dot: "royal", text: "Auto-applied to Senior Designer · Northwind", ts: "1h"),
                 ActivityDTO(id: "2", type: "applied", dot: "royal", text: "Applied to Senior Designer · Acme", ts: "2h"),
                 ActivityDTO(id: "3", type: "applied", dot: "royal", text: "Applied to Product Designer · Lumen", ts: "2h"),
             ])

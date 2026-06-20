@@ -328,8 +328,8 @@ struct DashboardScreen: View {
 
                         HStack(spacing: 10) {
                             statCard("\(store.dashboard?.totalApplied ?? 0)", "Applied", CarlColor.navy)
-                            statCard("\(store.dashboard?.responses ?? 0)", "Responses", CarlColor.royal)
-                            statCard("\(store.dashboard?.interviews ?? 0)", "Interviews", CarlColor.green)
+                            statCard("\(store.dashboard?.autoApplied ?? 0)", "Auto-applied", CarlColor.royal)
+                            statCard(store.dashboard.map { $0.avgFit > 0 ? "\($0.avgFit)%" : "—" } ?? "—", "Avg fit", CarlColor.green)
                         }
 
                         HStack {
@@ -447,28 +447,27 @@ struct ApplicationDetailScreen: View {
                             Spacer(minLength: 0)
                         }
                         HStack(spacing: 8) {
-                            Circle().fill(CarlColor.royal).frame(width: 9, height: 9)
-                            Text("Viewed by recruiter · 4h ago").carl(13, .bold).foregroundStyle(CarlColor.royal)
+                            Image(systemName: "checkmark.circle.fill").font(.system(size: 14)).foregroundStyle(CarlColor.green)
+                            Text("Applied by Carl").carl(13, .bold).foregroundStyle(CarlColor.greenDeep)
                             Spacer()
                         }
                         .padding(.horizontal, 13).padding(.vertical, 9)
-                        .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                     }
                     .padding(18)
                     .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .carlCardShadow(0.07, radius: 20, y: 6)
 
-                    // status stepper
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Status").carl(14, .heavy).foregroundStyle(CarlColor.navy)
-                        HStack(spacing: 0) {
-                            step("Applied", state: .done)
-                            connector(filled: true)
-                            step("Viewed", state: .current)
-                            connector(filled: false)
-                            step("Responded", state: .todo)
-                            connector(filled: false)
-                            step("Interview", state: .todo)
+                    // what happens next (replies go straight to the user's email)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("What happens next").carl(14, .heavy).foregroundStyle(CarlColor.navy)
+                        HStack(spacing: 11) {
+                            Image(systemName: "envelope.fill").font(.system(size: 15, weight: .semibold)).foregroundStyle(CarlColor.royal)
+                                .frame(width: 34, height: 34)
+                                .background(CarlColor.tintFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Text("Employers reply directly to your email — watch your inbox for interview requests.")
+                                .carl(13, .medium).foregroundStyle(CarlColor.textSoft)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .padding(18)
@@ -510,36 +509,6 @@ struct ApplicationDetailScreen: View {
                 .padding(.top, 50).padding(.leading, 14)
             }
         }
-    }
-
-    private enum StepState { case done, current, todo }
-
-    private func step(_ label: String, state: StepState) -> some View {
-        VStack(spacing: 7) {
-            Group {
-                switch state {
-                case .done:
-                    Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundStyle(.white)
-                        .frame(width: 26, height: 26).background(CarlColor.green, in: Circle())
-                case .current:
-                    Circle().fill(CarlColor.royal).frame(width: 26, height: 26)
-                        .overlay(Circle().fill(.white).frame(width: 8, height: 8))
-                        .overlay(Circle().stroke(CarlColor.royal.opacity(0.18), lineWidth: 4).frame(width: 30, height: 30))
-                case .todo:
-                    Circle().fill(.white).frame(width: 26, height: 26)
-                        .overlay(Circle().stroke(CarlColor.track, lineWidth: 2))
-                }
-            }
-            Text(label).carl(10.5, state == .todo ? .semibold : .bold)
-                .foregroundStyle(state == .done ? CarlColor.green : state == .current ? CarlColor.royal : CarlColor.textGhost)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func connector(filled: Bool) -> some View {
-        Rectangle().fill(filled ? CarlColor.green : CarlColor.track)
-            .frame(width: 18, height: 2)
-            .offset(y: -10)
     }
 
     private func submittedRow(_ icon: String, _ title: String) -> some View {
