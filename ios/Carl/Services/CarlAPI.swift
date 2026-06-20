@@ -87,7 +87,7 @@ struct QueueItem: Codable, Identifiable {
 }
 struct QueueResponse: Codable { let credits: Int; let items: [QueueItem] }
 
-struct ConfirmResponse: Codable { let submitted: Bool; let credits: Int?; let mode: String? }
+struct ConfirmResponse: Codable { let submitted: Bool; let credits: Int?; let mode: String?; let applyUrl: String?; let tier: String? }
 
 struct ActivityDTO: Codable, Identifiable {
     let id: String; let type: String; let dot: String; let text: String; let ts: String

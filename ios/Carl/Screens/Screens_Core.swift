@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - 13 · Review & apply queue
 
@@ -8,6 +9,7 @@ struct QueueScreen: View {
     @Environment(CarlStore.self) private var store
     @State private var showPaywall = false
     @State private var editingItem: QueueItem?
+    @State private var applyingItem: QueueItem?
 
     var body: some View {
         PhoneFrame(chrome: .dark) {
@@ -114,6 +116,9 @@ struct QueueScreen: View {
         .sheet(item: $editingItem) { item in
             DraftEditSheet(item: item).environment(store)
         }
+        .sheet(item: $applyingItem) { item in
+            ApplySheet(item: item).environment(store)
+        }
     }
 
     private var loadingState: some View {
@@ -201,7 +206,8 @@ struct QueueScreen: View {
                 Button {
                     let cost = item.tailored == true ? 2 : 1
                     if store.credits < cost { showPaywall = true }
-                    else { Task { await store.confirm(item.matchId) } }
+                    else if item.tier == "A" { Task { await store.confirm(item.matchId) } }
+                    else { applyingItem = item } // assisted: review + open the apply page
                 } label: {
                     CarlButton(title: item.tier == "A" ? "Confirm & submit" : "Review & send",
                                trailingNote: item.tailored == true ? "· 2 credits" : "· 1 credit", height: 48, glow: false)
@@ -451,6 +457,101 @@ struct DashboardScreen: View {
 }
 
 // MARK: - 15 · Application detail / tracking
+
+/// Assisted (one-tap) apply: Carl shows the prepared materials, then opens the
+/// employer's application page and records the send (spending the credit).
+struct ApplySheet: View {
+    let item: QueueItem
+    @Environment(CarlStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @State private var sending = false
+
+    private var coverNote: String { store.draftEdits[item.matchId] ?? item.draft.coverNote }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 12) {
+                        JobAvatar(letter: item.letter, color: CarlColor.named(item.avatarColor))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).carl(16, .heavy).foregroundStyle(CarlColor.navy)
+                            Text("\(item.company) · \(item.detail)").carl(12.5, .medium).foregroundStyle(CarlColor.textSoft)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    HStack(spacing: 9) {
+                        CarlMark(eyes: .happy).frame(width: 26, height: 25)
+                        Text("I prepared everything. Copy what you need, then send it on \(item.company)'s page.")
+                            .carl(13, .semibold).foregroundStyle(CarlColor.greenDeep)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 13).padding(.vertical, 11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                    if item.tailored == true {
+                        materialCard("Résumé", "A résumé tailored to this role is ready on your profile.", copyable: false)
+                    }
+                    materialCard("Cover note", coverNote)
+                    ForEach(Array(item.draft.answers.enumerated()), id: \.offset) { _, qa in
+                        materialCard(qa.question, qa.answer)
+                    }
+                }
+                .padding(20)
+            }
+            .background(CarlColor.screenBG)
+            .navigationTitle("Send application")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    Task {
+                        sending = true
+                        let url = await store.confirm(item.matchId)
+                        sending = false
+                        if let url, let u = URL(string: url) { openURL(u) }
+                        dismiss()
+                    }
+                } label: {
+                    CarlButton(title: sending ? "Opening…" : "Open application & send",
+                               systemIcon: "paperplane.fill",
+                               trailingNote: item.tailored == true ? "· 2 credits" : "· 1 credit")
+                }
+                .buttonStyle(.plain)
+                .disabled(sending)
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .background(.ultraThinMaterial)
+            }
+        }
+    }
+
+    private func materialCard(_ label: String, _ text: String, copyable: Bool = true) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(label.uppercased()).carl(11, .bold).foregroundStyle(CarlColor.textFaint).tracking(0.5)
+                Spacer()
+                if copyable {
+                    Button { UIPasteboard.general.string = text } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "doc.on.doc").font(.system(size: 11, weight: .semibold))
+                            Text("Copy").carl(11.5, .bold)
+                        }
+                        .foregroundStyle(CarlColor.royal)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Text(text).carl(13.5, .regular).foregroundStyle(CarlColor.textBody).lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.hairline, lineWidth: 1))
+    }
+}
 
 /// Edit the drafted cover note before sending. Saved to the store and applied
 /// when the application is confirmed.

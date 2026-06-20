@@ -234,19 +234,25 @@ final class CarlStore {
         Haptics.success()
     }
 
-    func confirm(_ matchId: String) async {
+    /// Submit/record an application. Returns the employer's apply URL for the
+    /// assisted (one-tap) path so the caller can open it.
+    @discardableResult
+    func confirm(_ matchId: String) async -> String? {
         if demo {
             let cost = (queue.first { $0.matchId == matchId }?.tailored == true) ? 2 : 1
             queue.removeAll { $0.matchId == matchId }
             demoApply(count: 1, creditsSpent: cost)
-            return
+            return nil
         }
+        var url: String?
         if let r = try? await api.confirm(matchId: matchId, coverNote: draftEdits[matchId]) {
             if let c = r.credits { credits = c }
             if r.submitted { Haptics.success() }
+            url = r.applyUrl
         }
         await loadQueue()
         await loadDashboard()
+        return url
     }
 
     func confirmAll() async {

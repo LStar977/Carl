@@ -285,7 +285,7 @@ async function confirmOne(ctx, matchId) {
   const verb = classifyTier(m.job) === 'A' ? 'Auto-applied to' : 'Applied to';
   store.addActivity(ctx.user.id, { id: uid('act'), type: 'applied', dot: 'royal', text: `${verb} ${m.job.title} · ${m.job.company}`, ts: app.submittedAt });
 
-  return { status: 200, body: { submitted: true, mode: result.mode, credits: balance(ctx.user) } };
+  return { status: 200, body: { submitted: true, mode: result.mode, credits: balance(ctx.user), applyUrl: m.job.applyUrl || null, tier: app.tier } };
 }
 
 // ----- Server / router ---------------------------------------------------

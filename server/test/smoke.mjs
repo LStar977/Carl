@@ -96,6 +96,7 @@ try {
   console.log('\nConfirm & credits');
   const confirm = await api('POST', `/v1/applications/${m1}/confirm`, { coverNote: 'My edited cover note.' });
   check('standard apply submits + consumes 1 credit (3 → 2)', confirm.json.submitted === true && confirm.json.credits === 2, JSON.stringify(confirm.json));
+  check('confirm returns the employer apply URL (assisted send)', typeof confirm.json.applyUrl === 'string' && confirm.json.applyUrl.length > 0, JSON.stringify(confirm.json.applyUrl));
   const appDetail = await api('GET', `/v1/applications/${m1}`);
   check('edited cover note was saved on the application', appDetail.json.application?.draft?.coverNote === 'My edited cover note.', JSON.stringify(appDetail.json.application?.draft));
 
