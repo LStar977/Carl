@@ -100,8 +100,11 @@ final class CarlStore {
         loadingQueue = false
     }
 
+    /// Per-application edits to the cover note, keyed by matchId (applied on send).
+    var draftEdits: [String: String] = [:]
+
     func confirm(_ matchId: String) async {
-        if let r = try? await api.confirm(matchId: matchId) {
+        if let r = try? await api.confirm(matchId: matchId, coverNote: draftEdits[matchId]) {
             if let c = r.credits { credits = c }
             if r.submitted { Haptics.success() }
         }

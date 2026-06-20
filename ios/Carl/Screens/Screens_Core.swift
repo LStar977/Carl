@@ -7,6 +7,7 @@ struct QueueScreen: View {
     var onOpenDetail: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var showPaywall = false
+    @State private var editingItem: QueueItem?
 
     var body: some View {
         PhoneFrame(chrome: .dark) {
@@ -96,6 +97,9 @@ struct QueueScreen: View {
             PaywallScreen(onPurchase: { showPaywall = false })
                 .environment(store)
         }
+        .sheet(item: $editingItem) { item in
+            DraftEditSheet(item: item).environment(store)
+        }
     }
 
     private var loadingState: some View {
@@ -153,7 +157,7 @@ struct QueueScreen: View {
                     Image(systemName: "doc.text").font(.system(size: 13, weight: .semibold)).foregroundStyle(CarlColor.royal)
                     Text("Carl drafted your application").carl(13, .heavy).foregroundStyle(CarlColor.navy)
                 }
-                draftBox(label: "Cover note", text: "\"\(item.draft.coverNote)\"")
+                draftBox(label: "Cover note", text: "\"\(store.draftEdits[item.matchId] ?? item.draft.coverNote)\"")
                 if let qa = item.draft.answers.first {
                     draftBox(label: qa.question, text: "\"\(qa.answer)\"")
                 }
@@ -165,10 +169,13 @@ struct QueueScreen: View {
             }
 
             HStack(spacing: 10) {
-                Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundStyle(CarlColor.royal)
-                    .frame(width: 52, height: 48)
-                    .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.border, lineWidth: 1.5))
+                Button { editingItem = item } label: {
+                    Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundStyle(CarlColor.royal)
+                        .frame(width: 52, height: 48)
+                        .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.border, lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
                 Button {
                     if store.credits <= 0 { showPaywall = true }
                     else { Task { await store.confirm(item.matchId) } }
@@ -335,6 +342,44 @@ struct DashboardScreen: View {
 }
 
 // MARK: - 15 · Application detail / tracking
+
+/// Edit the drafted cover note before sending. Saved to the store and applied
+/// when the application is confirmed.
+struct DraftEditSheet: View {
+    let item: QueueItem
+    @Environment(CarlStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var text: String = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("\(item.title) · \(item.company)").carl(13, .semibold).foregroundStyle(CarlColor.textSoft)
+                TextEditor(text: $text)
+                    .carl(14, .regular).foregroundStyle(CarlColor.textBody)
+                    .scrollContentBackground(.hidden)
+                    .padding(12)
+                    .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(minHeight: 240)
+                Text("Carl will send exactly this. Edits are saved for this application.")
+                    .carl(12, .medium).foregroundStyle(CarlColor.textFaint)
+                Spacer()
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(CarlColor.screenBG)
+            .navigationTitle("Edit cover note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { store.draftEdits[item.matchId] = text; dismiss() }.bold()
+                }
+            }
+        }
+        .onAppear { text = store.draftEdits[item.matchId] ?? item.draft.coverNote }
+    }
+}
 
 struct ApplicationDetailScreen: View {
     var onBack: () -> Void = {}

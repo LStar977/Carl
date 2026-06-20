@@ -69,9 +69,11 @@ try {
 
   console.log('\nConfirm & credits');
   const firstMatch = queue.json.items[0].matchId;
-  const confirm = await api('POST', `/v1/applications/${firstMatch}/confirm`);
+  const confirm = await api('POST', `/v1/applications/${firstMatch}/confirm`, { coverNote: 'My edited cover note.' });
   check('confirm submits', confirm.json.submitted === true, JSON.stringify(confirm.json));
   check('credit consumed (3 → 2)', confirm.json.credits === 2, `credits=${confirm.json.credits}`);
+  const appDetail = await api('GET', `/v1/applications/${firstMatch}`);
+  check('edited cover note was saved on the application', appDetail.json.application?.draft?.coverNote === 'My edited cover note.', JSON.stringify(appDetail.json.application?.draft));
 
   // exhaust remaining credits, then hit the paywall
   const q2 = await api('GET', '/v1/queue');

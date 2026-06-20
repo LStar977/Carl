@@ -197,6 +197,13 @@ async function confirmOne(ctx, matchId) {
     return { status: 200, body: { submitted: true, already: true, credits: balance(ctx.user) } };
   }
 
+  // Apply any edits the user made to the cover note before it's sent.
+  const edit = ctx.body || {};
+  if (typeof edit.coverNote === 'string' && edit.coverNote.trim()) {
+    app.draft = { ...app.draft, coverNote: edit.coverNote.trim() };
+    store.upsertApplication(app);
+  }
+
   const result = await submitApplication({ user: ctx.user, profile: store.getProfile(ctx.user.id), job: m.job, draft: app.draft });
   if (!result.submitted) return { status: 502, body: { error: 'submit_failed', detail: result.error } };
 

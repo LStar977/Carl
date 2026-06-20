@@ -165,8 +165,9 @@ actor CarlAPI {
         try await request("GET", "/v1/queue")
     }
 
-    func confirm(matchId: String) async throws -> ConfirmResponse {
-        try await request("POST", "/v1/applications/\(matchId)/confirm")
+    func confirm(matchId: String, coverNote: String? = nil) async throws -> ConfirmResponse {
+        struct Body: Codable { let coverNote: String? }
+        return try await request("POST", "/v1/applications/\(matchId)/confirm", body: Body(coverNote: coverNote))
     }
 
     func confirmAll() async throws -> ConfirmResponse {
