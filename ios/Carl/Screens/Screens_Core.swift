@@ -295,7 +295,8 @@ struct DashboardScreen: View {
                     VStack(spacing: 16) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Good morning, Alex").carl(14, .semibold).foregroundStyle(CarlColor.textFaint)
+                                Text(store.firstName.isEmpty ? "Good morning" : "Good morning, \(store.firstName)")
+                                    .carl(14, .semibold).foregroundStyle(CarlColor.textFaint)
                                 Text("Carl's been busy").carl(22, .heavy).foregroundStyle(CarlColor.navy)
                             }
                             Spacer()
@@ -363,7 +364,7 @@ struct DashboardScreen: View {
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
-        .task { await store.loadDashboard() }
+        .task { await store.loadDashboard(); await store.loadProfile() }
     }
 
     private func statCard(_ value: String, _ label: String, _ color: Color) -> some View {
@@ -487,7 +488,7 @@ struct ApplicationDetailScreen: View {
                         Divider().overlay(CarlColor.hairline)
                         submittedRow("questionmark.circle", "3 screening answers")
                         Divider().overlay(CarlColor.hairline)
-                        submittedRow("doc.richtext", "Resume · Alex_Rivera.pdf")
+                        submittedRow("doc.richtext", "Your résumé")
                     }
                     .padding(18)
                     .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -543,8 +544,8 @@ struct SettingsScreen: View {
                             .frame(width: 60, height: 60)
                             .background(CarlColor.navy, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Alex Rivera").carl(22, .heavy).foregroundStyle(CarlColor.navy)
-                            Text("Senior Product Designer · 6 yrs").carl(13.5, .medium).foregroundStyle(CarlColor.textSoft)
+                            Text(store.displayName).carl(22, .heavy).foregroundStyle(CarlColor.navy)
+                            Text(store.roleSummary).carl(13.5, .medium).foregroundStyle(CarlColor.textSoft)
                         }
                         Spacer(minLength: 0)
                     }
@@ -632,7 +633,7 @@ struct SettingsScreen: View {
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
-        .task { await store.refreshCredits(); await store.loadBlocklist() }
+        .task { await store.refreshCredits(); await store.loadProfile() }
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallScreen(onPurchase: { showPaywall = false })
                 .environment(store)

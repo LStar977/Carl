@@ -44,6 +44,7 @@ final class CarlStore {
             return
         }
         await refreshCredits()
+        await loadProfile()
         await storeKit.load()
         booted = true
     }
@@ -83,8 +84,24 @@ final class CarlStore {
         if let r = try? await api.blockCompany(company, remove: true) { blockedCompanies = r.blockedCompanies }
     }
 
-    func loadBlocklist() async {
-        if let r = try? await api.profile() { blockedCompanies = r.blockedCompanies ?? [] }
+    func loadProfile() async {
+        guard let r = try? await api.profile() else { return }
+        blockedCompanies = r.blockedCompanies ?? []
+        if let c = r.contact, !c.name.isEmpty || !c.email.isEmpty { contact = c }
+        if let e = r.eligibility { eligibility = e }
+        if parsed == nil, let p = r.resume { parsed = p }
+    }
+
+    // Display helpers (real user data with friendly fallbacks).
+    var firstName: String {
+        String(contact.name.split(separator: " ").first ?? "")
+    }
+    var displayName: String {
+        contact.name.isEmpty ? "Your profile" : contact.name
+    }
+    var roleSummary: String {
+        guard let p = parsed else { return "Set up your profile" }
+        return "\(p.targetRole) · \(p.years) yrs"
     }
 
     // MARK: Résumé builder (one-time $14.99 unlock)

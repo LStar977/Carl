@@ -108,7 +108,12 @@ struct Pack: Codable, Identifiable {
 struct CreditsResponse: Codable { let balance: Int; let packs: [Pack] }
 struct PurchaseResponse: Codable { let ok: Bool; let granted: Int?; let balance: Int? }
 struct BlocklistResponse: Codable { let blockedCompanies: [String] }
-struct ProfileResponse: Codable { let blockedCompanies: [String]? }
+struct ProfileResponse: Codable {
+    let blockedCompanies: [String]?
+    let contact: Contact?
+    let resume: ParsedResume?
+    let eligibility: Eligibility?
+}
 struct EntitlementResponse: Codable { let ok: Bool; let entitlements: [String]? }
 struct ResumeBuildInput: Codable { var name: String; var role: String; var years: String; var skills: String; var experience: String }
 

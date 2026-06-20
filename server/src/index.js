@@ -275,7 +275,8 @@ async function confirmOne(ctx, matchId) {
   app.history = [{ at: app.submittedAt, status: 'applied', mode: result.mode }];
   store.upsertApplication(app);
   m.status = 'submitted'; store.updateMatch(ctx.user.id, m);
-  store.addActivity(ctx.user.id, { id: uid('act'), type: 'applied', dot: 'royal', text: `Applied to ${m.job.title} · ${m.job.company}`, ts: app.submittedAt });
+  const verb = classifyTier(m.job) === 'A' ? 'Auto-applied to' : 'Applied to';
+  store.addActivity(ctx.user.id, { id: uid('act'), type: 'applied', dot: 'royal', text: `${verb} ${m.job.title} · ${m.job.company}`, ts: app.submittedAt });
 
   return { status: 200, body: { submitted: true, mode: result.mode, credits: balance(ctx.user) } };
 }
