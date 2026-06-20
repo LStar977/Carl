@@ -24,8 +24,25 @@ struct MatchCard: View {
 
 // MARK: - Carl is searching (immersive)
 
+/// A number that animates (counts up) as its `value` changes, e.g. 0 → 312.
+/// Drive it by toggling a @State inside `withAnimation`; ease-out gives the
+/// fast-then-settle "13 → 45 → 127 → 268 → 312" feel.
+struct CountUp: View, Animatable {
+    var value: Double
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+    var body: some View {
+        Text("\(Int(value.rounded()))").monospacedDigit()
+    }
+}
+
 struct SearchingScreen: View {
     var onDone: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+    @State private var counting = false
+    @State private var target = 312
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navyDeep
@@ -37,7 +54,8 @@ struct SearchingScreen: View {
                 CarlAvatar(lensInk: CarlColor.navyDeeper, showDashes: true, scans: true, rings: true)
                     .frame(width: 140, height: 132)
                     .padding(.bottom, 24)
-                Text("312").carl(72, .heavy).foregroundStyle(.white)
+                CountUp(value: counting ? Double(target) : 0)
+                    .carlFont(72, .heavy).foregroundStyle(.white)
                 Text("great-fit jobs found & counting…")
                     .carl(16, .semibold).foregroundStyle(CarlColor.textOnNavyMuted)
                     .padding(.top, 6).padding(.bottom, 28)
@@ -64,6 +82,8 @@ struct SearchingScreen: View {
             .padding(.horizontal, 28)
             .padding(.top, 84).padding(.bottom, 40)
             .onAppear {
+                target = store.search?.count ?? 312
+                withAnimation(.easeOut(duration: 2.2)) { counting = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onDone() }
             }
         }
