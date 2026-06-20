@@ -187,8 +187,20 @@ struct InterviewScreen: View {
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(CarlColor.hairline, lineWidth: 1))
                 .carlCardShadow(0.08)
-                .onAppear { inputFocused = true }
+                .onAppear {
+                    inputFocused = true
+                    if store.demo && draft.isEmpty { draft = demoAnswer(for: q.field) }
+                }
             }
+        }
+    }
+
+    /// Realistic pre-filled answers so the demo walkthrough needs no typing.
+    private func demoAnswer(for field: Field) -> String {
+        switch field {
+        case .work: return "Product Designer"
+        case .area: return "Toronto"
+        default: return ""
         }
     }
 
@@ -372,10 +384,10 @@ struct ResumeUploadScreen: View {
 
                 if store.demo {
                     Button { finish("") } label: {
-                        Text("Skip — use a sample résumé (demo)").carl(13, .bold).foregroundStyle(CarlColor.textSoft)
+                        CarlButton(title: "Continue with a sample résumé", systemIcon: "wand.and.stars")
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 10)
+                    .padding(.top, 16)
                 }
 
                 Spacer()
