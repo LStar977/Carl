@@ -13,17 +13,30 @@ export function classifyTier(job) {
 /** Produce a cover note + screening answers tailored to the job. */
 export async function draftApplication(profile, job) {
   const parsed = profile?.resume?.parsed || {};
+  const elig = profile?.eligibility || {};
   const drafted = await llmJSON({
     system: 'You are Carl, drafting a concise, genuine job application. Respond with JSON only.',
     prompt:
       `Candidate: ${parsed.targetRole}, ${parsed.years} yrs, skills: ${(parsed.skills || []).join(', ')}.\n` +
       `Job: ${job.title} at ${job.company} (${job.location}).\n` +
-      `${job.descriptionSnippet}\n\n` +
+      `${job.descriptionSnippet}\n` +
+      `Facts to use truthfully in answers: ${eligibilityFacts(elig)}\n\n` +
       'Return JSON {"coverNote": string (2-3 sentences, first person), ' +
       '"answers": [{"question": string, "answer": string}] (1-2 items)}',
     maxTokens: 500,
   });
   return drafted || templateDraft(parsed, job);
+}
+
+/** Summarise the screening answers Carl actually knows, for the draft prompt. */
+function eligibilityFacts(e) {
+  const f = [];
+  if (e.authorized != null) f.push(`work-authorized: ${e.authorized ? 'yes' : 'no'}`);
+  if (e.needsSponsorship != null) f.push(`needs visa sponsorship: ${e.needsSponsorship ? 'yes' : 'no'}`);
+  if (e.willingToRelocate != null) f.push(`willing to relocate: ${e.willingToRelocate ? 'yes' : 'no'}`);
+  if (e.salaryExpectation) f.push(`salary expectation: ${e.salaryExpectation}`);
+  if (e.noticePeriod) f.push(`notice period: ${e.noticePeriod}`);
+  return f.length ? f.join(', ') : 'none provided';
 }
 
 function templateDraft(parsed, job) {

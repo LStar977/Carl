@@ -50,6 +50,10 @@ try {
   check('résumé parsed targetRole', !!resume.json.parsed?.targetRole, JSON.stringify(resume.json));
   check('résumé parsed skills', Array.isArray(resume.json.parsed?.skills) && resume.json.parsed.skills.length > 0);
 
+  await api('PUT', '/v1/profile', { eligibility: { authorized: true, needsSponsorship: false, willingToRelocate: true, salaryExpectation: '$140k+' } });
+  const prof = await api('GET', '/v1/profile');
+  check('eligibility saved + returned', prof.json.eligibility?.salaryExpectation === '$140k+', JSON.stringify(prof.json.eligibility));
+
   console.log('\nSearch & reveal');
   const search = await api('POST', '/v1/search', {});
   check('search returns a job count', search.json.count > 0, `count=${search.json.count}`);

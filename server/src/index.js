@@ -53,12 +53,17 @@ route('POST', '/v1/auth/anon', async () => {
 
 route('GET', '/v1/profile', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { prefs: {}, resume: null };
-  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null, contact: contactOf(ctx.user) } };
+  return { status: 200, body: { prefs: p.prefs, resume: p.resume?.parsed || null, contact: contactOf(ctx.user), eligibility: p.eligibility || null } };
 });
 
 route('PUT', '/v1/profile', async (ctx) => {
   const p = store.getProfile(ctx.user.id) || { userId: ctx.user.id, prefs: {}, resume: null };
   p.prefs = { ...p.prefs, ...(ctx.body.prefs || {}) };
+  // Standard application screening answers (work authorization, sponsorship,
+  // relocation, salary expectation, EEO, links) — used to fill out applications.
+  if (ctx.body.eligibility && typeof ctx.body.eligibility === 'object') {
+    p.eligibility = { ...(p.eligibility || {}), ...ctx.body.eligibility };
+  }
   store.saveProfile(p);
   // The user can confirm/edit the contact details employers will reach them on.
   const c = ctx.body.contact;
@@ -68,7 +73,7 @@ route('PUT', '/v1/profile', async (ctx) => {
     if (typeof c.phone === 'string') ctx.user.phone = c.phone.trim();
     store.updateUser(ctx.user);
   }
-  return { status: 200, body: { prefs: p.prefs, contact: contactOf(ctx.user) } };
+  return { status: 200, body: { prefs: p.prefs, contact: contactOf(ctx.user), eligibility: p.eligibility || null } };
 });
 
 route('POST', '/v1/resume', async (ctx) => {

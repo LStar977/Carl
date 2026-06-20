@@ -604,6 +604,86 @@ struct ConfirmScreen: View {
     }
 }
 
+// MARK: 05b · Screening questions
+
+/// Captures the standard application screening answers (work authorization,
+/// sponsorship, relocation, salary, notice) so Carl can fill them in for real.
+struct EligibilityScreen: View {
+    var onContinue: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+    var body: some View {
+        @Bindable var store = store
+        return PhoneFrame(chrome: .dark) {
+            CarlColor.screenBG
+        } content: {
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    CarlMark().frame(width: 40, height: 40).background(CarlColor.navy, in: Circle())
+                    Text("A few quick questions").carl(20, .heavy).foregroundStyle(CarlColor.navy)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 6)
+                Text("Employers ask these on most applications. I'll answer them for you each time.")
+                    .carl(14, .medium).foregroundStyle(CarlColor.textSoft)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 18)
+
+                VStack(spacing: 0) {
+                    toggleRow("Authorized to work where I'm applying", $store.eligibility.authorized)
+                    Divider().overlay(CarlColor.hairline)
+                    toggleRow("I need visa sponsorship", $store.eligibility.needsSponsorship)
+                    Divider().overlay(CarlColor.hairline)
+                    toggleRow("Open to relocating", $store.eligibility.willingToRelocate)
+                }
+                .padding(.horizontal, 16)
+                .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .carlCardShadow(0.06, radius: 18, y: 6)
+                .padding(.bottom, 14)
+
+                VStack(spacing: 12) {
+                    fieldRow(icon: "dollarsign.circle.fill", placeholder: "Salary expectation (e.g. $130k+)",
+                             text: $store.eligibility.salaryExpectation)
+                    fieldRow(icon: "calendar", placeholder: "Notice period (e.g. 2 weeks)",
+                             text: $store.eligibility.noticePeriod)
+                }
+                .padding(16)
+                .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .carlCardShadow(0.06, radius: 18, y: 6)
+
+                Spacer()
+                Button(action: onContinue) { CarlButton(title: "Looks good — find my jobs") }
+                    .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 74).padding(.bottom, 40)
+        }
+    }
+
+    private func toggleRow(_ label: String, _ value: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Text(label).carl(15, .semibold).foregroundStyle(CarlColor.navy)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Toggle("", isOn: value).labelsHidden().tint(CarlColor.royal)
+        }
+        .padding(.vertical, 14)
+    }
+
+    private func fieldRow(icon: String, placeholder: String, text: Binding<String>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(CarlColor.royal).frame(width: 22)
+            TextField(placeholder, text: text)
+                .carl(15, .semibold).foregroundStyle(CarlColor.navy)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .background(CarlColor.screenBG, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(CarlColor.border, lineWidth: 1))
+    }
+}
+
 private struct SkillTag: View {
     var text: String
     var muted: Bool

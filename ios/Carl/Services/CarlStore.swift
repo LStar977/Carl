@@ -23,6 +23,8 @@ final class CarlStore {
                          location: nil, country: "us", payFloor: 120, workType: "full-time")
     /// Contact details employers will reach the user on (pre-filled from the résumé).
     var contact = Contact(name: "", email: "", phone: "")
+    /// Standard screening answers Carl fills in on applications.
+    var eligibility = Eligibility()
 
     private let api = CarlAPI.shared
     let storeKit = StoreService()
@@ -65,6 +67,9 @@ final class CarlStore {
 
     /// Persist the contact details employers will use to reach the user.
     func saveContact() async { try? await api.updateContact(contact) }
+
+    /// Persist the screening answers Carl uses on applications.
+    func saveEligibility() async { try? await api.updateEligibility(eligibility) }
 
     func runSearch() async {
         search = try? await api.search(prefs: prefs)

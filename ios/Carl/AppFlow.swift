@@ -77,9 +77,10 @@ struct OnboardingFlow: View {
             case 1: InterviewScreen(onContinue: next)
             case 2: ResumeUploadScreen(onContinue: { run { await store.parseResume() } })
             case 3: ReadingResumeScreen(onDone: next)
-            case 4: ConfirmScreen(onConfirm: { run { await store.runSearch() } })
-            case 5: SearchingScreen(onDone: next)
-            case 6: RevealScreen(onUnlock: next)
+            case 4: ConfirmScreen(onConfirm: next)
+            case 5: EligibilityScreen(onContinue: { run { await store.saveEligibility(); await store.runSearch() } })
+            case 6: SearchingScreen(onDone: next)
+            case 7: RevealScreen(onUnlock: next)
             default: PaywallScreen(onPurchase: {
                 Task { await store.loadQueue(); await store.loadDashboard() }
                 onFinished()

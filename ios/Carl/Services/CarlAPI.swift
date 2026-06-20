@@ -8,6 +8,21 @@ struct AuthResponse: Codable { let token: String; let user: UserDTO }
 /// The details an employer uses to reach the user — carried on every application.
 struct Contact: Codable, Equatable { var name: String; var email: String; var phone: String }
 
+/// Standard application screening answers Carl fills in on the user's behalf.
+struct Eligibility: Codable, Equatable {
+    var authorized: Bool = true
+    var needsSponsorship: Bool = false
+    var willingToRelocate: Bool = false
+    var salaryExpectation: String = ""
+    var noticePeriod: String = ""
+    var linkedinUrl: String = ""
+    var portfolioUrl: String = ""
+    var gender: String = "decline"
+    var race: String = "decline"
+    var veteranStatus: String = "decline"
+    var disabilityStatus: String = "decline"
+}
+
 struct ParsedResume: Codable {
     let targetRole: String
     let years: Int
@@ -126,6 +141,12 @@ actor CarlAPI {
     func updateContact(_ contact: Contact) async throws {
         struct Body: Codable { let contact: Contact }
         let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(contact: contact))
+    }
+
+    /// Save the standard screening answers Carl uses to fill out applications.
+    func updateEligibility(_ eligibility: Eligibility) async throws {
+        struct Body: Codable { let eligibility: Eligibility }
+        let _: EmptyAck = try await request("PUT", "/v1/profile", body: Body(eligibility: eligibility))
     }
 
     func parseResume(text: String) async throws -> ParsedResume {
