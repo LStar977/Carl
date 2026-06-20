@@ -18,8 +18,7 @@ struct RootView: View {
             } else if signedIn {
                 MainTabView()
             } else {
-                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } },
-                               onDemo: { store.startDemo(); withAnimation { signedIn = true } })
+                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
             }
         }
         .environment(store)
@@ -74,14 +73,13 @@ struct ConnectionErrorView: View {
 
 struct OnboardingFlow: View {
     var onFinished: () -> Void
-    var onDemo: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var step = 0
 
     var body: some View {
         Group {
             switch step {
-            case 0: MeetCarlScreen(onStart: next, onDemo: onDemo)
+            case 0: MeetCarlScreen(onStart: next, onDemo: { store.startDemo(); next() })
             case 1: InterviewScreen(onContinue: next)
             case 2: ResumeUploadScreen(onContinue: { run { await store.parseResume() } })
             case 3: ReadingResumeScreen(onDone: next)

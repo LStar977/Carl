@@ -370,6 +370,14 @@ struct ResumeUploadScreen: View {
                 }
                 .buttonStyle(.plain)
 
+                if store.demo {
+                    Button { finish("") } label: {
+                        Text("Skip — use a sample résumé (demo)").carl(13, .bold).foregroundStyle(CarlColor.textSoft)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 10)
+                }
+
                 Spacer()
                 HStack(spacing: 7) {
                     Image(systemName: "lock.fill").font(.system(size: 12))
