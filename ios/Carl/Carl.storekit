@@ -1,0 +1,76 @@
+{
+  "identifier" : "CARL0001",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "19.00",
+      "familyShareable" : false,
+      "internalID" : "1001",
+      "localizations" : [
+        {
+          "description" : "25 job applications",
+          "displayName" : "Starter · 25",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.carlapp.credits.starter",
+      "referenceName" : "Starter 25",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "59.00",
+      "familyShareable" : false,
+      "internalID" : "1002",
+      "localizations" : [
+        {
+          "description" : "100 applications + 10 bonus",
+          "displayName" : "Popular · 110",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.carlapp.credits.popular",
+      "referenceName" : "Popular 110",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "149.00",
+      "familyShareable" : false,
+      "internalID" : "1003",
+      "localizations" : [
+        {
+          "description" : "300 applications + 40 bonus",
+          "displayName" : "Pro · 340",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.carlapp.credits.pro",
+      "referenceName" : "Pro 340",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "1004",
+      "localizations" : [
+        {
+          "description" : "Carl writes you a professional résumé from scratch",
+          "displayName" : "Résumé Builder",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.carlapp.resumebuilder",
+      "referenceName" : "Résumé Builder",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA"
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

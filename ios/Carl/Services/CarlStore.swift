@@ -1,0 +1,345 @@
+import SwiftUI
+import Observation
+
+/// Session state + backend calls that drive the screens. Injected into the
+/// environment by `RootView` (live) and by the gallery (sample).
+@MainActor
+@Observable
+final class CarlStore {
+    var credits = 3
+    var resumeText: String?
+    var parsed: ParsedResume?
+    var search: SearchResponse?
+    var queue: [QueueItem] = []
+    var dashboard: DashboardResponse?
+    var busy = false
+
+    var booted = false
+    var connected = true
+    var loadingQueue = false
+    var loadingDashboard = false
+
+    var prefs = JobPrefs(titles: ["Product Designer"], locationType: "remote",
+                         location: nil, country: "us", payFloor: 120, workType: "full-time")
+    /// Contact details employers will reach the user on (pre-filled from the résumé).
+    var contact = Contact(name: "", email: "", phone: "")
+    /// Standard screening answers Carl fills in on applications.
+    var eligibility = Eligibility()
+    /// When true, the app runs fully offline on seeded sample data (preview mode).
+    var demo = false
+
+    private let api = CarlAPI.shared
+    let storeKit = StoreService()
+    static let sampleResume =
+        "Senior Product Designer with 6 years of experience. Skills: Figma, " +
+        "Design Systems, Prototyping, UX Research. Led design systems end-to-end."
+
+    // MARK: Onboarding
+
+    func boot() async {
+        if demo { booted = true; connected = true; return }
+        do {
+            _ = try await api.authAnon()
+            connected = true
+        } catch {
+            connected = false
+            booted = true
+            return
+        }
+        await refreshCredits()
+        await loadProfile()
+        await storeKit.load()
+        booted = true
+    }
+
+    func retry() async {
+        booted = false
+        await boot()
+    }
+
+    /// Enter offline preview mode: seed rich sample data and drop into the app.
+    func startDemo() {
+        demo = true
+        connected = true
+        booted = true
+        let s = CarlStore.sample
+        credits = s.credits
+        parsed = s.parsed
+        search = s.search
+        queue = s.queue
+        dashboard = s.dashboard
+        contact = Contact(name: "Alex Rivera", email: "alex.rivera@example.com", phone: "415-555-0142")
+    }
+
+    /// Locally record an application in demo mode (no backend).
+    private func demoApply(count: Int, creditsSpent: Int) {
+        credits = max(0, credits - creditsSpent)
+        if let d = dashboard {
+            dashboard = DashboardResponse(appliedToday: d.appliedToday + count, totalApplied: d.totalApplied + count,
+                                          autoApplied: d.autoApplied + count, avgFit: d.avgFit, credits: credits, activity: d.activity)
+        }
+        Haptics.success()
+    }
+
+    func savePreferences() async { if demo { return }; try? await api.updatePrefs(prefs) }
+
+    func parseResume() async {
+        if demo { parsed = CarlStore.sample.parsed; return }
+        parsed = try? await api.parseResume(text: resumeText ?? Self.sampleResume)
+        // Pre-fill contact from the résumé so the user just confirms it.
+        if let c = parsed?.contact {
+            if contact.name.isEmpty { contact.name = c.name }
+            if contact.email.isEmpty { contact.email = c.email }
+            if contact.phone.isEmpty { contact.phone = c.phone }
+        }
+    }
+
+    /// Persist the contact details employers will use to reach the user.
+    func saveContact() async { if demo { return }; try? await api.updateContact(contact) }
+
+    /// Persist the screening answers Carl uses on applications.
+    func saveEligibility() async { if demo { return }; try? await api.updateEligibility(eligibility) }
+
+    /// Companies Carl will never apply to (e.g. the user's current employer).
+    var blockedCompanies: [String] = []
+
+    func block(_ company: String) async {
+        if demo {
+            if !blockedCompanies.contains(company) { blockedCompanies.append(company) }
+            queue.removeAll { $0.company == company }
+            return
+        }
+        if let r = try? await api.blockCompany(company) { blockedCompanies = r.blockedCompanies }
+        await loadQueue()
+    }
+
+    func unblock(_ company: String) async {
+        if demo { blockedCompanies.removeAll { $0 == company }; return }
+        if let r = try? await api.blockCompany(company, remove: true) { blockedCompanies = r.blockedCompanies }
+    }
+
+    func loadProfile() async {
+        if demo { return }
+        guard let r = try? await api.profile() else { return }
+        blockedCompanies = r.blockedCompanies ?? []
+        if let c = r.contact, !c.name.isEmpty || !c.email.isEmpty { contact = c }
+        if let e = r.eligibility { eligibility = e }
+        if parsed == nil, let p = r.resume { parsed = p }
+    }
+
+    /// Permanently delete the account + all data. Returns success.
+    func deleteAccount() async -> Bool {
+        if demo { return true }
+        do { try await api.deleteAccount(); return true } catch { return false }
+    }
+
+    // Display helpers (real user data with friendly fallbacks).
+    var firstName: String {
+        String(contact.name.split(separator: " ").first ?? "")
+    }
+    var displayName: String {
+        contact.name.isEmpty ? "Your profile" : contact.name
+    }
+    var roleSummary: String {
+        guard let p = parsed else { return "Set up your profile" }
+        return "\(p.targetRole) · \(p.years) yrs"
+    }
+
+    // MARK: Résumé builder (one-time $14.99 unlock)
+
+    var hasResumeBuilder = false
+
+    /// Buy the résumé-builder unlock via StoreKit (falls back to a direct grant
+    /// in dev when no StoreKit product is configured). Returns success.
+    func buyResumeBuilder() async -> Bool {
+        if demo { hasResumeBuilder = true; Haptics.success(); return true }
+        if let product = storeKit.product(id: StoreService.resumeBuilderID) {
+            guard let jws = await storeKit.purchase(product) else { return false }
+            _ = try? await api.buyResumeBuilder(receipt: jws)
+        } else {
+            _ = try? await api.buyResumeBuilder()
+        }
+        hasResumeBuilder = true
+        Haptics.success()
+        return true
+    }
+
+    /// Generate a résumé from the user's notes and use it as their résumé.
+    func buildResume(_ input: ResumeBuildInput) async -> Bool {
+        if demo {
+            resumeText = "\(input.name.isEmpty ? "Alex Rivera" : input.name) — \(input.role)\n\(input.skills)\n\n\(input.experience)"
+            return true
+        }
+        guard let text = try? await api.buildResume(input) else { return false }
+        resumeText = text
+        return true
+    }
+
+    func runSearch() async {
+        if demo { search = CarlStore.sample.search; return }
+        search = try? await api.search(prefs: prefs)
+    }
+
+    /// Manually pull in fresh matches and refill the queue.
+    func findMoreJobs() async {
+        if demo { queue = CarlStore.sample.queue; Haptics.success(); return }
+        busy = true
+        _ = try? await api.searchMore()
+        await loadQueue()
+        await loadDashboard()
+        busy = false
+    }
+
+    /// Buy a pack via StoreKit, then grant credits on the backend. Falls back to
+    /// a direct backend grant when no StoreKit product is available (dev without
+    /// the .storekit config or before App Store Connect setup). Returns success.
+    @discardableResult
+    func buy(packId: String) async -> Bool {
+        if demo {
+            credits += ["starter": 25, "popular": 110, "pro": 340][packId] ?? 25
+            Haptics.success()
+            return true
+        }
+        if let product = storeKit.product(id: "com.carlapp.credits.\(packId)") {
+            guard let jws = await storeKit.purchase(product) else { return false }
+            // Send the signed transaction (JWS) so the backend can verify it.
+            _ = try? await api.purchase(packId: packId, receipt: jws)
+        } else {
+            _ = try? await api.purchase(packId: packId)
+        }
+        await refreshCredits()
+        Haptics.success()
+        return true
+    }
+
+    // MARK: Main app
+
+    func loadQueue() async {
+        if demo { return }
+        loadingQueue = true
+        if let q = try? await api.queue() { queue = q.items; credits = q.credits }
+        loadingQueue = false
+    }
+
+    /// Per-application edits to the cover note, keyed by matchId (applied on send).
+    var draftEdits: [String: String] = [:]
+    /// Match ids whose résumé is currently being tailored (for in-progress UI).
+    var tailoring: Set<String> = []
+
+    /// Tailor the résumé to a job (premium, +1 credit on submit).
+    func tailorResume(_ matchId: String) async {
+        if demo {
+            if let i = queue.firstIndex(where: { $0.matchId == matchId }) { queue[i].tailored = true }
+            Haptics.success()
+            return
+        }
+        tailoring.insert(matchId)
+        try? await api.tailorResume(matchId: matchId)
+        await loadQueue()
+        tailoring.remove(matchId)
+        Haptics.success()
+    }
+
+    /// Submit/record an application. Returns the employer's apply URL for the
+    /// assisted (one-tap) path so the caller can open it.
+    @discardableResult
+    func confirm(_ matchId: String) async -> String? {
+        if demo {
+            let cost = (queue.first { $0.matchId == matchId }?.tailored == true) ? 2 : 1
+            queue.removeAll { $0.matchId == matchId }
+            demoApply(count: 1, creditsSpent: cost)
+            return nil
+        }
+        var url: String?
+        if let r = try? await api.confirm(matchId: matchId, coverNote: draftEdits[matchId]) {
+            if let c = r.credits { credits = c }
+            if r.submitted { Haptics.success() }
+            url = r.applyUrl
+        }
+        await loadQueue()
+        await loadDashboard()
+        return url
+    }
+
+    func confirmAll() async {
+        if demo {
+            let n = queue.count
+            queue.removeAll()
+            demoApply(count: n, creditsSpent: n)
+            return
+        }
+        busy = true
+        _ = try? await api.confirmAll()
+        await loadQueue()
+        await loadDashboard()
+        busy = false
+    }
+
+    func loadDashboard() async {
+        if demo { return }
+        loadingDashboard = true
+        dashboard = try? await api.dashboard()
+        if let c = dashboard?.credits { credits = c }
+        loadingDashboard = false
+    }
+
+    func refreshCredits() async {
+        if demo { return }
+        if let c = try? await api.credits() { credits = c.balance }
+    }
+
+    // MARK: Sample (gallery / previews)
+
+    static let sample: CarlStore = {
+        let s = CarlStore()
+        s.credits = 102
+        s.parsed = ParsedResume(targetRole: "Senior Product Designer", years: 6,
+                                seniority: "Senior",
+                                skills: ["Figma", "Design Systems", "Prototyping", "UX Research"],
+                                summary: "")
+        s.search = SearchResponse(
+            count: 312, avgFit: 88,
+            sources: [SourceCount(name: "LinkedIn Jobs", found: 142),
+                      SourceCount(name: "Greenhouse", found: 86),
+                      SourceCount(name: "Lever", found: 54),
+                      SourceCount(name: "Ashby", found: 30)],
+            topMatches: sampleMatches)
+        s.queue = sampleQueue
+        s.dashboard = DashboardResponse(
+            appliedToday: 47, totalApplied: 218, autoApplied: 156, avgFit: 88, credits: 102,
+            activity: [
+                ActivityDTO(id: "1", type: "applied", dot: "royal", text: "Auto-applied to Senior Designer · Northwind", ts: "1h"),
+                ActivityDTO(id: "2", type: "applied", dot: "royal", text: "Applied to Senior Designer · Acme", ts: "2h"),
+                ActivityDTO(id: "3", type: "applied", dot: "royal", text: "Applied to Product Designer · Lumen", ts: "2h"),
+            ])
+        return s
+    }()
+
+    static let sampleMatches: [MatchDTO] = [
+        MatchDTO(matchId: "m1", fit: 96, reasons: ["role matches", "remote"], status: "suggested",
+                 title: "Senior Product Designer", company: "Northwind", detail: "Remote · $145–170k",
+                 location: "Remote", pay: "$145–170k", letter: "N", avatarColor: "navy", tier: "A", source: "Greenhouse"),
+        MatchDTO(matchId: "m2", fit: 94, reasons: ["pay in range"], status: "suggested",
+                 title: "Product Designer", company: "Lumen Health", detail: "SF Hybrid · $130–155k",
+                 location: "SF Hybrid", pay: "$130–155k", letter: "L", avatarColor: "greenhouse", tier: "A", source: "Greenhouse"),
+        MatchDTO(matchId: "m3", fit: 92, reasons: ["strong overlap"], status: "suggested",
+                 title: "Staff Product Designer", company: "Vela Robotics", detail: "Austin · $170–200k",
+                 location: "Austin", pay: "$170–200k", letter: "V", avatarColor: "lever", tier: "A", source: "Lever"),
+    ]
+
+    static let sampleQueue: [QueueItem] = [
+        QueueItem(matchId: "m1", applicationId: "a1", fit: 96, reasons: ["skills + 6 yrs match, pay in range, remote"],
+                  title: "Senior Product Designer", company: "Northwind", detail: "Remote · $145–170k",
+                  letter: "N", avatarColor: "navy", tier: "A",
+                  draft: Draft(coverNote: "Northwind's systems-led design culture is exactly where I do my best work. Over 6 years I've shipped design systems that…",
+                               answers: [QA(question: "Why do you want this role?", answer: "I want to own a design system end-to-end with a team that values craft…")])),
+        QueueItem(matchId: "m2", applicationId: "a2", fit: 94, reasons: ["pay in range"],
+                  title: "Product Designer", company: "Lumen Health", detail: "SF Hybrid · $130–155k",
+                  letter: "L", avatarColor: "greenhouse", tier: "A",
+                  draft: Draft(coverNote: "Lumen's mission resonates with me…", answers: [])),
+        QueueItem(matchId: "m3", applicationId: "a3", fit: 92, reasons: ["strong overlap"],
+                  title: "Staff Product Designer", company: "Vela Robotics", detail: "Austin · $170–200k",
+                  letter: "V", avatarColor: "lever", tier: "B",
+                  draft: Draft(coverNote: "Vela's robotics work is exciting…", answers: [])),
+    ]
+}
