@@ -13,11 +13,13 @@ struct RootView: View {
             if !store.booted {
                 LaunchView()
             } else if !store.connected {
-                ConnectionErrorView { Task { await store.retry() } }
+                ConnectionErrorView(retry: { Task { await store.retry() } },
+                                    onDemo: { store.startDemo(); withAnimation { signedIn = true } })
             } else if signedIn {
                 MainTabView()
             } else {
-                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
+                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } },
+                               onDemo: { store.startDemo(); withAnimation { signedIn = true } })
             }
         }
         .environment(store)
@@ -42,6 +44,7 @@ struct LaunchView: View {
 /// Shown when the backend can't be reached, with a retry.
 struct ConnectionErrorView: View {
     var retry: () -> Void
+    var onDemo: () -> Void = {}
     var body: some View {
         ZStack {
             CarlColor.screenBG.ignoresSafeArea()
@@ -56,6 +59,10 @@ struct ConnectionErrorView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 8)
+                Button(action: onDemo) {
+                    Text("Preview a demo instead").carl(15, .bold).foregroundStyle(CarlColor.royal)
+                }
+                .buttonStyle(.plain)
             }
             .padding(40)
         }
@@ -67,13 +74,14 @@ struct ConnectionErrorView: View {
 
 struct OnboardingFlow: View {
     var onFinished: () -> Void
+    var onDemo: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var step = 0
 
     var body: some View {
         Group {
             switch step {
-            case 0: MeetCarlScreen(onStart: next)
+            case 0: MeetCarlScreen(onStart: next, onDemo: onDemo)
             case 1: InterviewScreen(onContinue: next)
             case 2: ResumeUploadScreen(onContinue: { run { await store.parseResume() } })
             case 3: ReadingResumeScreen(onDone: next)

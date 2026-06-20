@@ -25,6 +25,8 @@ final class CarlStore {
     var contact = Contact(name: "", email: "", phone: "")
     /// Standard screening answers Carl fills in on applications.
     var eligibility = Eligibility()
+    /// When true, the app runs fully offline on seeded sample data (preview mode).
+    var demo = false
 
     private let api = CarlAPI.shared
     let storeKit = StoreService()
@@ -35,6 +37,7 @@ final class CarlStore {
     // MARK: Onboarding
 
     func boot() async {
+        if demo { booted = true; connected = true; return }
         do {
             _ = try await api.authAnon()
             connected = true
@@ -54,9 +57,34 @@ final class CarlStore {
         await boot()
     }
 
-    func savePreferences() async { try? await api.updatePrefs(prefs) }
+    /// Enter offline preview mode: seed rich sample data and drop into the app.
+    func startDemo() {
+        demo = true
+        connected = true
+        booted = true
+        let s = CarlStore.sample
+        credits = s.credits
+        parsed = s.parsed
+        search = s.search
+        queue = s.queue
+        dashboard = s.dashboard
+        contact = Contact(name: "Alex Rivera", email: "alex.rivera@example.com", phone: "415-555-0142")
+    }
+
+    /// Locally record an application in demo mode (no backend).
+    private func demoApply(count: Int, creditsSpent: Int) {
+        credits = max(0, credits - creditsSpent)
+        if let d = dashboard {
+            dashboard = DashboardResponse(appliedToday: d.appliedToday + count, totalApplied: d.totalApplied + count,
+                                          autoApplied: d.autoApplied + count, avgFit: d.avgFit, credits: credits, activity: d.activity)
+        }
+        Haptics.success()
+    }
+
+    func savePreferences() async { if demo { return }; try? await api.updatePrefs(prefs) }
 
     func parseResume() async {
+        if demo { parsed = CarlStore.sample.parsed; return }
         parsed = try? await api.parseResume(text: resumeText ?? Self.sampleResume)
         // Pre-fill contact from the résumé so the user just confirms it.
         if let c = parsed?.contact {
@@ -67,24 +95,31 @@ final class CarlStore {
     }
 
     /// Persist the contact details employers will use to reach the user.
-    func saveContact() async { try? await api.updateContact(contact) }
+    func saveContact() async { if demo { return }; try? await api.updateContact(contact) }
 
     /// Persist the screening answers Carl uses on applications.
-    func saveEligibility() async { try? await api.updateEligibility(eligibility) }
+    func saveEligibility() async { if demo { return }; try? await api.updateEligibility(eligibility) }
 
     /// Companies Carl will never apply to (e.g. the user's current employer).
     var blockedCompanies: [String] = []
 
     func block(_ company: String) async {
+        if demo {
+            if !blockedCompanies.contains(company) { blockedCompanies.append(company) }
+            queue.removeAll { $0.company == company }
+            return
+        }
         if let r = try? await api.blockCompany(company) { blockedCompanies = r.blockedCompanies }
         await loadQueue()
     }
 
     func unblock(_ company: String) async {
+        if demo { blockedCompanies.removeAll { $0 == company }; return }
         if let r = try? await api.blockCompany(company, remove: true) { blockedCompanies = r.blockedCompanies }
     }
 
     func loadProfile() async {
+        if demo { return }
         guard let r = try? await api.profile() else { return }
         blockedCompanies = r.blockedCompanies ?? []
         if let c = r.contact, !c.name.isEmpty || !c.email.isEmpty { contact = c }
@@ -111,6 +146,7 @@ final class CarlStore {
     /// Buy the résumé-builder unlock via StoreKit (falls back to a direct grant
     /// in dev when no StoreKit product is configured). Returns success.
     func buyResumeBuilder() async -> Bool {
+        if demo { hasResumeBuilder = true; Haptics.success(); return true }
         if let product = storeKit.product(id: StoreService.resumeBuilderID) {
             guard let jws = await storeKit.purchase(product) else { return false }
             _ = try? await api.buyResumeBuilder(receipt: jws)
@@ -124,12 +160,17 @@ final class CarlStore {
 
     /// Generate a résumé from the user's notes and use it as their résumé.
     func buildResume(_ input: ResumeBuildInput) async -> Bool {
+        if demo {
+            resumeText = "\(input.name.isEmpty ? "Alex Rivera" : input.name) — \(input.role)\n\(input.skills)\n\n\(input.experience)"
+            return true
+        }
         guard let text = try? await api.buildResume(input) else { return false }
         resumeText = text
         return true
     }
 
     func runSearch() async {
+        if demo { search = CarlStore.sample.search; return }
         search = try? await api.search(prefs: prefs)
     }
 
@@ -138,6 +179,11 @@ final class CarlStore {
     /// the .storekit config or before App Store Connect setup). Returns success.
     @discardableResult
     func buy(packId: String) async -> Bool {
+        if demo {
+            credits += ["starter": 25, "popular": 110, "pro": 340][packId] ?? 25
+            Haptics.success()
+            return true
+        }
         if let product = storeKit.product(id: "com.carlapp.credits.\(packId)") {
             guard let jws = await storeKit.purchase(product) else { return false }
             // Send the signed transaction (JWS) so the backend can verify it.
@@ -153,6 +199,7 @@ final class CarlStore {
     // MARK: Main app
 
     func loadQueue() async {
+        if demo { return }
         loadingQueue = true
         if let q = try? await api.queue() { queue = q.items; credits = q.credits }
         loadingQueue = false
@@ -165,6 +212,11 @@ final class CarlStore {
 
     /// Tailor the résumé to a job (premium, +1 credit on submit).
     func tailorResume(_ matchId: String) async {
+        if demo {
+            if let i = queue.firstIndex(where: { $0.matchId == matchId }) { queue[i].tailored = true }
+            Haptics.success()
+            return
+        }
         tailoring.insert(matchId)
         try? await api.tailorResume(matchId: matchId)
         await loadQueue()
@@ -173,6 +225,12 @@ final class CarlStore {
     }
 
     func confirm(_ matchId: String) async {
+        if demo {
+            let cost = (queue.first { $0.matchId == matchId }?.tailored == true) ? 2 : 1
+            queue.removeAll { $0.matchId == matchId }
+            demoApply(count: 1, creditsSpent: cost)
+            return
+        }
         if let r = try? await api.confirm(matchId: matchId, coverNote: draftEdits[matchId]) {
             if let c = r.credits { credits = c }
             if r.submitted { Haptics.success() }
@@ -182,6 +240,12 @@ final class CarlStore {
     }
 
     func confirmAll() async {
+        if demo {
+            let n = queue.count
+            queue.removeAll()
+            demoApply(count: n, creditsSpent: n)
+            return
+        }
         busy = true
         _ = try? await api.confirmAll()
         await loadQueue()
@@ -190,6 +254,7 @@ final class CarlStore {
     }
 
     func loadDashboard() async {
+        if demo { return }
         loadingDashboard = true
         dashboard = try? await api.dashboard()
         if let c = dashboard?.credits { credits = c }
@@ -197,6 +262,7 @@ final class CarlStore {
     }
 
     func refreshCredits() async {
+        if demo { return }
         if let c = try? await api.credits() { credits = c.balance }
     }
 

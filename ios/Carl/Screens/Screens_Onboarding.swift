@@ -7,6 +7,7 @@ import UIKit
 
 struct MeetCarlScreen: View {
     var onStart: () -> Void = {}
+    var onDemo: (() -> Void)? = nil
     var body: some View {
         PhoneFrame(chrome: .light, homeIndicatorLight: true) {
             CarlColor.navy
@@ -51,9 +52,15 @@ struct MeetCarlScreen: View {
                     VStack(spacing: 16) {
                         Button(action: onStart) { CarlButton(title: "Let's find me a job") }
                             .buttonStyle(.plain)
-                        HStack(spacing: 5) {
-                            Text("Already with Carl?").carl(14, .medium).foregroundStyle(.white.opacity(0.6))
-                            Text("Log in").carl(14, .bold).foregroundStyle(.white)
+                        if let onDemo {
+                            Button(action: onDemo) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "play.circle.fill").font(.system(size: 14, weight: .semibold))
+                                    Text("Preview a demo").carl(14, .bold)
+                                }
+                                .foregroundStyle(.white.opacity(0.85))
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 24)
@@ -91,6 +98,7 @@ struct InterviewScreen: View {
     @State private var step = 0
     @State private var messages: [Msg] = []
     @State private var draft = ""
+    @FocusState private var inputFocused: Bool
 
     private var current: Question? { step < questions.count ? questions[step] : nil }
 
@@ -162,6 +170,7 @@ struct InterviewScreen: View {
                     TextField(placeholder, text: $draft)
                         .carlFont(15, .medium)
                         .foregroundStyle(CarlColor.navy)
+                        .focused($inputFocused)
                         .submitLabel(.send)
                         .onSubmit { answer(draft) }
                     Button {
@@ -178,6 +187,7 @@ struct InterviewScreen: View {
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(CarlColor.hairline, lineWidth: 1))
                 .carlCardShadow(0.08)
+                .onAppear { inputFocused = true }
             }
         }
     }

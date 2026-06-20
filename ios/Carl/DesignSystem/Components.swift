@@ -94,7 +94,7 @@ struct PhoneFrame<Background: View, Content: View>: View {
             content().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
+        .ignoresSafeArea(.container, edges: .all) // keep edge-to-edge, but let the keyboard push content up
         .preferredColorScheme(chrome == .light ? .dark : .light)
     }
 
