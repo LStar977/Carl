@@ -464,7 +464,7 @@ struct ResumeBuilderScreen: View {
 
                     Text("YOUR EXPERIENCE").carl(11, .bold).foregroundStyle(CarlColor.textFaint).tracking(0.5).padding(.top, 4)
                     TextEditor(text: $experience)
-                        .carl(14, .regular).foregroundStyle(CarlColor.textBody)
+                        .carlFont(14, .regular).foregroundStyle(CarlColor.textBody)
                         .scrollContentBackground(.hidden)
                         .padding(12).frame(minHeight: 160)
                         .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -503,7 +503,7 @@ struct ResumeBuilderScreen: View {
 
     private func field(_ placeholder: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
         TextField(placeholder, text: text)
-            .carl(15, .semibold).foregroundStyle(CarlColor.navy)
+            .carlFont(15, .semibold).foregroundStyle(CarlColor.navy)
             .keyboardType(keyboard)
             .padding(.horizontal, 14).padding(.vertical, 13)
             .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -676,7 +676,7 @@ struct ConfirmScreen: View {
             Image(systemName: icon).font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(CarlColor.royal).frame(width: 22)
             TextField(placeholder, text: text)
-                .carl(16, .semibold).foregroundStyle(CarlColor.navy)
+                .carlFont(16, .semibold).foregroundStyle(CarlColor.navy)
                 .keyboardType(keyboard)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -773,7 +773,7 @@ struct EligibilityScreen: View {
             Image(systemName: icon).font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(CarlColor.royal).frame(width: 22)
             TextField(placeholder, text: text)
-                .carl(15, .semibold).foregroundStyle(CarlColor.navy)
+                .carlFont(15, .semibold).foregroundStyle(CarlColor.navy)
                 .autocorrectionDisabled()
         }
         .padding(.horizontal, 14).padding(.vertical, 12)

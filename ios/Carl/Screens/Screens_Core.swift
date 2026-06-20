@@ -404,7 +404,7 @@ struct DraftEditSheet: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("\(item.title) · \(item.company)").carl(13, .semibold).foregroundStyle(CarlColor.textSoft)
                 TextEditor(text: $text)
-                    .carl(14, .regular).foregroundStyle(CarlColor.textBody)
+                    .carlFont(14, .regular).foregroundStyle(CarlColor.textBody)
                     .scrollContentBackground(.hidden)
                     .padding(12)
                     .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
