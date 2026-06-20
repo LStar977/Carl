@@ -23,8 +23,9 @@ final class StoreService {
 
     func product(id: String) -> Product? { products.first { $0.id == id } }
 
-    /// Runs the purchase sheet. Returns the verified transaction on success.
-    func purchase(_ product: Product) async -> Transaction? {
+    /// Runs the purchase sheet. Returns the signed transaction JWS on success
+    /// (the JWS lives on the `VerificationResult`, not the `Transaction`).
+    func purchase(_ product: Product) async -> String? {
         purchasing = true
         defer { purchasing = false }
         do {
@@ -32,7 +33,7 @@ final class StoreService {
             case .success(let verification):
                 if case .verified(let tx) = verification {
                     await tx.finish()
-                    return tx
+                    return verification.jwsRepresentation
                 }
                 return nil
             case .userCancelled, .pending:

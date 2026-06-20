@@ -112,8 +112,8 @@ final class CarlStore {
     /// in dev when no StoreKit product is configured). Returns success.
     func buyResumeBuilder() async -> Bool {
         if let product = storeKit.product(id: StoreService.resumeBuilderID) {
-            guard let tx = await storeKit.purchase(product) else { return false }
-            _ = try? await api.buyResumeBuilder(receipt: tx.jwsRepresentation)
+            guard let jws = await storeKit.purchase(product) else { return false }
+            _ = try? await api.buyResumeBuilder(receipt: jws)
         } else {
             _ = try? await api.buyResumeBuilder()
         }
@@ -139,9 +139,9 @@ final class CarlStore {
     @discardableResult
     func buy(packId: String) async -> Bool {
         if let product = storeKit.product(id: "com.carlapp.credits.\(packId)") {
-            guard let tx = await storeKit.purchase(product) else { return false }
+            guard let jws = await storeKit.purchase(product) else { return false }
             // Send the signed transaction (JWS) so the backend can verify it.
-            _ = try? await api.purchase(packId: packId, receipt: tx.jwsRepresentation)
+            _ = try? await api.purchase(packId: packId, receipt: jws)
         } else {
             _ = try? await api.purchase(packId: packId)
         }
