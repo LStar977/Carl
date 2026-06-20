@@ -16,7 +16,11 @@ struct RootView: View {
                 ConnectionErrorView(retry: { Task { await store.retry() } },
                                     onDemo: { store.startDemo(); withAnimation { signedIn = true } })
             } else if signedIn {
-                MainTabView()
+                MainTabView(onExitDemo: {
+                    store = CarlStore()
+                    withAnimation(.easeInOut) { signedIn = false }
+                    Task { await store.boot() }
+                })
             } else {
                 OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
             }
@@ -109,6 +113,7 @@ struct OnboardingFlow: View {
 // MARK: - Main tab shell
 
 struct MainTabView: View {
+    var onExitDemo: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var tab: CarlTab = .home
     @State private var showDetail = false
@@ -117,10 +122,10 @@ struct MainTabView: View {
         ZStack {
             Group {
                 switch tab {
-                case .home:     DashboardScreen(selectedTab: $tab, onOpenDetail: openDetail)
+                case .home:     DashboardScreen(selectedTab: $tab, onOpenDetail: openDetail, onExitDemo: onExitDemo)
                 case .queue:    QueueScreen(selectedTab: $tab, onOpenDetail: openDetail)
                 case .activity: ActivityScreen(selectedTab: $tab, onOpenDetail: openDetail)
-                case .profile:  SettingsScreen(selectedTab: $tab)
+                case .profile:  SettingsScreen(selectedTab: $tab, onExitDemo: onExitDemo)
                 }
             }
             if showDetail {

@@ -302,9 +302,37 @@ struct QueueScreen: View {
 
 // MARK: - 14 · Dashboard / progress
 
+/// Shown across the app while in demo mode — converts the preview into a funnel.
+struct DemoExitBanner: View {
+    var onExit: () -> Void = {}
+    var body: some View {
+        Button(action: onExit) {
+            HStack(spacing: 11) {
+                Image(systemName: "play.circle.fill").font(.system(size: 18, weight: .semibold)).foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("You're previewing a demo").carl(13.5, .heavy).foregroundStyle(.white)
+                    Text("Sample data — set up your real Carl").carl(12, .medium).foregroundStyle(.white.opacity(0.82))
+                }
+                Spacer(minLength: 6)
+                Text("Set up").carl(13, .bold).foregroundStyle(CarlColor.royal)
+                    .padding(.horizontal, 12).frame(height: 30)
+                    .background(.white, in: Capsule())
+            }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .background(
+                LinearGradient(colors: [CarlColor.royal, CarlColor.navy], startPoint: .leading, endPoint: .trailing),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .shadow(color: CarlColor.royal.opacity(0.28), radius: 10, y: 6)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct DashboardScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.home)
     var onOpenDetail: () -> Void = {}
+    var onExitDemo: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var appliedShown = 0
     var body: some View {
@@ -314,6 +342,7 @@ struct DashboardScreen: View {
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
+                        if store.demo { DemoExitBanner(onExit: onExitDemo) }
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(store.firstName.isEmpty ? "Good morning" : "Good morning, \(store.firstName)")
@@ -561,6 +590,7 @@ struct ApplicationDetailScreen: View {
 
 struct SettingsScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.profile)
+    var onExitDemo: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var carlTalks = true
     @State private var showPaywall = false
@@ -570,6 +600,7 @@ struct SettingsScreen: View {
         } content: {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
+                    if store.demo { DemoExitBanner(onExit: onExitDemo) }
                     HStack(spacing: 14) {
                         CarlMark(eyes: .happy, showHighlight: false)
                             .frame(width: 44, height: 44)
