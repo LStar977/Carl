@@ -48,6 +48,11 @@ export const config = {
   boardSources: (process.env.BOARD_SOURCES || '').split(',').map((s) => s.trim()).filter(Boolean),
   boardRefreshHours: Number(process.env.BOARD_REFRESH_HOURS || 168),
 
+  // Automatic per-user "find new jobs" — re-searches every set-up user on a
+  // schedule and refills their review queue. Off by default; turn on in prod.
+  autoSearchEnabled: (process.env.AUTO_SEARCH_ENABLED || 'off').toLowerCase() === 'on',
+  autoSearchIntervalHours: Number(process.env.AUTO_SEARCH_INTERVAL_HOURS || 24),
+
   applyMode: (process.env.APPLY_MODE || 'dry-run').toLowerCase(),
   freeCredits: Number(process.env.FREE_CREDITS || 3),
 

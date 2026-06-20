@@ -17,6 +17,7 @@ const db = {
 export const store = {
   createUser(u) { db.users.set(u.id, u); db.activity.set(u.id, []); return u; },
   getUser(id) { return db.users.get(id); },
+  allUsers() { return [...db.users.values()]; },
   getUserByToken(tok) {
     for (const u of db.users.values()) if (u.token === tok) return u;
     return undefined;

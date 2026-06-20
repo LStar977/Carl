@@ -10,6 +10,7 @@ import { classifyTier, draftApplication, submitApplication, tailorResume } from 
 import { PACKS, balance, consume, purchase } from './services/credits.js';
 import { startIngestSchedule } from './services/ingest.js';
 import { startBoardRefreshSchedule } from './services/board-refresh.js';
+import { findNewMatches, startAutoSearchSchedule } from './services/autosearch.js';
 
 // ----- DTO helpers -------------------------------------------------------
 
@@ -137,6 +138,12 @@ route('POST', '/v1/search', async (ctx) => {
       topMatches: matches.slice(0, 3).map(matchDTO),
     },
   };
+});
+
+// Manual "Find more jobs": add new, deduped matches to the queue.
+route('POST', '/v1/search/more', async (ctx) => {
+  const found = await findNewMatches(ctx.user);
+  return { status: 200, body: { found, credits: balance(ctx.user) } };
 });
 
 route('GET', '/v1/queue', async (ctx) => {
@@ -342,4 +349,5 @@ server.listen(config.port, () => {
   console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode} ingest=${config.ingestEnabled}`);
   startIngestSchedule();
   startBoardRefreshSchedule();
+  startAutoSearchSchedule();
 });

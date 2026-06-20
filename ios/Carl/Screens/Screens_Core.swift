@@ -62,6 +62,20 @@ struct QueueScreen: View {
                                         .onTapGesture(perform: onOpenDetail)
                                 }
                             }
+                            Button { Task { await store.findMoreJobs() } } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrow.clockwise").font(.system(size: 13, weight: .bold))
+                                    Text(store.busy ? "Finding…" : "Find more jobs").carl(14, .bold)
+                                }
+                                .foregroundStyle(CarlColor.royal)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(CarlColor.hairlineCool, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(store.busy)
+                            .padding(.top, 4)
                         }
                     }
                     .padding(.horizontal, 22)
@@ -112,8 +126,14 @@ struct QueueScreen: View {
         VStack(spacing: 12) {
             CarlAvatar(eyes: .happy, showDashes: true).frame(width: 110, height: 104)
             Text("You're all caught up").carl(20, .heavy).foregroundStyle(CarlColor.navy)
-            Text("Carl's still scanning — new matches will land here.")
+            Text("Carl scans for fresh roles automatically — or pull some in right now.")
                 .carl(14, .medium).foregroundStyle(CarlColor.textSoft).multilineTextAlignment(.center)
+            Button { Task { await store.findMoreJobs() } } label: {
+                CarlButton(title: store.busy ? "Finding jobs…" : "Find jobs", systemIcon: "magnifyingglass").frame(width: 220)
+            }
+            .buttonStyle(.plain)
+            .disabled(store.busy)
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity).padding(.top, 60)
     }
@@ -310,14 +330,16 @@ struct DashboardScreen: View {
                         ZStack(alignment: .topTrailing) {
                             VStack(alignment: .leading, spacing: 0) {
                                 Text("Today").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
-                                Text("Carl applied to \(store.dashboard?.appliedToday ?? 0) jobs").carl(44, .heavy).foregroundStyle(.white)
+                                Text("Carl applied to \(store.dashboard?.appliedToday ?? 0) jobs").carl(40, .heavy).foregroundStyle(.white)
                                     .padding(.top, 4)
+                                    .padding(.trailing, 60) // clear the mascot in the corner
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Text("Nice work resting while Carl hustled.")
                                     .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
                                     .padding(.top, 8)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            CarlAvatar(eyes: .happy, showSparkle: true).frame(width: 80, height: 76)
+                            CarlAvatar(eyes: .happy, showSparkle: true).frame(width: 62, height: 59)
                         }
                         .padding(22)
                         .background(

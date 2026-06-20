@@ -196,6 +196,14 @@ actor CarlAPI {
         return try await request("POST", "/v1/search", body: Body(prefs: prefs))
     }
 
+    /// Find more matches (deduped, additive) and add them to the queue.
+    @discardableResult
+    func searchMore() async throws -> Int {
+        struct R: Codable { let found: Int }
+        let r: R = try await request("POST", "/v1/search/more")
+        return r.found
+    }
+
     func queue() async throws -> QueueResponse {
         try await request("GET", "/v1/queue")
     }

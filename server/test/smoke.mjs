@@ -113,6 +113,10 @@ try {
   check('dashboard has activity feed', dash.json.activity?.length >= 2);
   check('dashboard shows credits', dash.json.credits === 110, `credits=${dash.json.credits}`);
 
+  console.log('\nFind more jobs');
+  const more = await api('POST', '/v1/search/more');
+  check('search/more returns a found count', more.status === 200 && typeof more.json.found === 'number', JSON.stringify(more.json));
+
   console.log('\nApplication detail');
   const detail = await api('GET', `/v1/applications/${m1}`);
   check('detail returns submitted application', detail.json.application?.status === 'applied');

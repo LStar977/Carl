@@ -174,6 +174,16 @@ final class CarlStore {
         search = try? await api.search(prefs: prefs)
     }
 
+    /// Manually pull in fresh matches and refill the queue.
+    func findMoreJobs() async {
+        if demo { queue = CarlStore.sample.queue; Haptics.success(); return }
+        busy = true
+        _ = try? await api.searchMore()
+        await loadQueue()
+        await loadDashboard()
+        busy = false
+    }
+
     /// Buy a pack via StoreKit, then grant credits on the backend. Falls back to
     /// a direct backend grant when no StoreKit product is available (dev without
     /// the .storekit config or before App Store Connect setup). Returns success.
