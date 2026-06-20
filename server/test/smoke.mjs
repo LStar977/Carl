@@ -54,6 +54,14 @@ try {
   const prof = await api('GET', '/v1/profile');
   check('eligibility saved + returned', prof.json.eligibility?.salaryExpectation === '$140k+', JSON.stringify(prof.json.eligibility));
 
+  console.log('\nRésumé builder ($14.99 unlock)');
+  const gated = await api('POST', '/v1/resume/build', { input: { role: 'Designer', experience: 'x' } });
+  check('build blocked without the unlock (402)', gated.status === 402, `status=${gated.status}`);
+  const ent = await api('POST', '/v1/entitlements/purchase', { productId: 'com.carlapp.resumebuilder' });
+  check('resume-builder unlock granted', ent.json.ok === true && ent.json.entitlements?.includes('resumeBuilder'), JSON.stringify(ent.json));
+  const built = await api('POST', '/v1/resume/build', { input: { name: 'Jane', role: 'Product Designer', years: '6', skills: 'Figma', experience: 'Led design systems at Acme for 4 years.' } });
+  check('build returns a résumé after unlock', built.status === 200 && typeof built.json.resume === 'string' && built.json.resume.length > 0, JSON.stringify(built.json).slice(0, 120));
+
   console.log('\nSearch & reveal');
   const search = await api('POST', '/v1/search', {});
   check('search returns a job count', search.json.count > 0, `count=${search.json.count}`);

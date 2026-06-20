@@ -299,6 +299,7 @@ struct ResumeUploadScreen: View {
     @Environment(CarlStore.self) private var store
     @State private var showFileImporter = false
     @State private var showLinkedIn = false
+    @State private var showBuilder = false
     @State private var photoItem: PhotosPickerItem?
     @State private var processing = false
 
@@ -348,6 +349,17 @@ struct ResumeUploadScreen: View {
                     .buttonStyle(.plain)
                 }
 
+                Button { showBuilder = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles").font(.system(size: 13, weight: .semibold))
+                        Text("Don't have a résumé? Create one").carl(14, .bold)
+                    }
+                    .foregroundStyle(CarlColor.royal)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
+                }
+                .buttonStyle(.plain)
+
                 Spacer()
                 HStack(spacing: 7) {
                     Image(systemName: "lock.fill").font(.system(size: 12))
@@ -383,6 +395,10 @@ struct ResumeUploadScreen: View {
                 finish(text)
             })
         }
+        .sheet(isPresented: $showBuilder) {
+            ResumeBuilderScreen(onDone: { showBuilder = false; onContinue() })
+                .environment(store)
+        }
     }
 
     private func handleFile(_ url: URL) {
@@ -410,6 +426,88 @@ struct ResumeUploadScreen: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         store.resumeText = trimmed.isEmpty ? nil : trimmed
         onContinue()
+    }
+}
+
+/// Guided "build my résumé from scratch" flow ($14.99 one-time unlock).
+struct ResumeBuilderScreen: View {
+    var onDone: () -> Void = {}
+    @Environment(CarlStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var role = ""
+    @State private var years = ""
+    @State private var skills = ""
+    @State private var experience = ""
+    @State private var working = false
+
+    private var canBuild: Bool {
+        !role.trimmingCharacters(in: .whitespaces).isEmpty
+            && experience.trimmingCharacters(in: .whitespaces).count > 20
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 10) {
+                        CarlMark(eyes: .happy).frame(width: 34, height: 34).background(CarlColor.navy, in: Circle())
+                        Text("Let's build your résumé").carl(18, .heavy).foregroundStyle(CarlColor.navy)
+                    }
+                    Text("Tell me about yourself in your own words — I'll turn it into a polished résumé.")
+                        .carl(13.5, .medium).foregroundStyle(CarlColor.textSoft).fixedSize(horizontal: false, vertical: true)
+
+                    field("Full name", text: $name)
+                    field("Target role (e.g. Product Designer)", text: $role)
+                    field("Years of experience", text: $years, keyboard: .numberPad)
+                    field("Top skills (comma separated)", text: $skills)
+
+                    Text("YOUR EXPERIENCE").carl(11, .bold).foregroundStyle(CarlColor.textFaint).tracking(0.5).padding(.top, 4)
+                    TextEditor(text: $experience)
+                        .carl(14, .regular).foregroundStyle(CarlColor.textBody)
+                        .scrollContentBackground(.hidden)
+                        .padding(12).frame(minHeight: 160)
+                        .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    Text("Jobs, what you did, results, education — rough notes are fine.")
+                        .carl(12, .medium).foregroundStyle(CarlColor.textFaint)
+
+                    Button {
+                        Task {
+                            working = true
+                            if !store.hasResumeBuilder, await store.buyResumeBuilder() == false { working = false; return }
+                            let ok = await store.buildResume(ResumeBuildInput(name: name, role: role, years: years, skills: skills, experience: experience))
+                            working = false
+                            if ok { onDone() }
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if working { ProgressView().tint(.white) }
+                            Text(store.hasResumeBuilder ? "Create my résumé" : "Create my résumé · $14.99").carl(17, .bold)
+                        }
+                        .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 56)
+                        .background(canBuild ? CarlColor.royal : CarlColor.textFaint,
+                                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canBuild || working)
+                    .padding(.top, 6)
+                }
+                .padding(20)
+            }
+            .background(CarlColor.screenBG)
+            .navigationTitle("Résumé builder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+
+    private func field(_ placeholder: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
+        TextField(placeholder, text: text)
+            .carl(15, .semibold).foregroundStyle(CarlColor.navy)
+            .keyboardType(keyboard)
+            .padding(.horizontal, 14).padding(.vertical, 13)
+            .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(CarlColor.border, lineWidth: 1))
     }
 }
 

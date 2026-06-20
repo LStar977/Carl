@@ -6,10 +6,12 @@ import StoreKit
 @MainActor
 @Observable
 final class StoreService {
+    static let resumeBuilderID = "com.carlapp.resumebuilder"
     static let ids = [
         "com.carlapp.credits.starter",
         "com.carlapp.credits.popular",
         "com.carlapp.credits.pro",
+        "com.carlapp.resumebuilder",
     ]
 
     var products: [Product] = []

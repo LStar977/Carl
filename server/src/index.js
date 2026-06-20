@@ -2,7 +2,8 @@ import { createServer } from 'node:http';
 import { config, hasLLM, hasATS, hasAdzuna, hasUSAJobs } from './config.js';
 import { store } from './store.js';
 import { sendJSON, readBody, uid, nowISO } from './util.js';
-import { parseResume } from './services/resume.js';
+import { parseResume, buildResume } from './services/resume.js';
+import { purchaseEntitlement, hasEntitlement } from './services/entitlements.js';
 import { searchJobs } from './services/jobs.js';
 import { scoreMatches, blockedSet } from './services/match.js';
 import { classifyTier, draftApplication, submitApplication, tailorResume } from './services/apply.js';
@@ -45,7 +46,7 @@ route('GET', '/health', async () => ({
 route('POST', '/v1/auth/anon', async () => {
   const user = store.createUser({
     id: uid('user'), token: uid('tok'), name: '', email: '', phone: '',
-    credits: config.freeCredits, createdAt: nowISO(),
+    credits: config.freeCredits, entitlements: [], createdAt: nowISO(),
   });
   store.saveProfile({ userId: user.id, prefs: {}, resume: null });
   return { status: 200, body: { token: user.token, user: publicUser(user) } };
@@ -101,6 +102,19 @@ route('POST', '/v1/resume', async (ctx) => {
   if (c.name && !ctx.user.name) { ctx.user.name = c.name; changed = true; }
   if (changed) store.updateUser(ctx.user);
   return { status: 200, body: { parsed } };
+});
+
+// Buy a one-time entitlement (e.g. the résumé builder, $14.99).
+route('POST', '/v1/entitlements/purchase', async (ctx) => {
+  const r = await purchaseEntitlement(ctx.user, ctx.body?.productId, ctx.body?.receipt);
+  return { status: r.ok ? 200 : 400, body: r };
+});
+
+// Build a full résumé from the user's notes — requires the resumeBuilder unlock.
+route('POST', '/v1/resume/build', async (ctx) => {
+  if (!hasEntitlement(ctx.user, 'resumeBuilder')) return { status: 402, body: { error: 'needs_purchase' } };
+  const resume = await buildResume(ctx.body?.input || {});
+  return { status: 200, body: { resume } };
 });
 
 route('POST', '/v1/search', async (ctx) => {
@@ -317,7 +331,7 @@ function corsHeaders() {
   };
 }
 
-function publicUser(u) { return { id: u.id, name: u.name, email: u.email, phone: u.phone || '', credits: u.credits }; }
+function publicUser(u) { return { id: u.id, name: u.name, email: u.email, phone: u.phone || '', credits: u.credits, entitlements: u.entitlements || [] }; }
 function contactOf(u) { return { name: u.name || '', email: u.email || '', phone: u.phone || '' }; }
 
 server.listen(config.port, () => {

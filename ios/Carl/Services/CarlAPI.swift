@@ -109,6 +109,8 @@ struct CreditsResponse: Codable { let balance: Int; let packs: [Pack] }
 struct PurchaseResponse: Codable { let ok: Bool; let granted: Int?; let balance: Int? }
 struct BlocklistResponse: Codable { let blockedCompanies: [String] }
 struct ProfileResponse: Codable { let blockedCompanies: [String]? }
+struct EntitlementResponse: Codable { let ok: Bool; let entitlements: [String]? }
+struct ResumeBuildInput: Codable { var name: String; var role: String; var years: String; var skills: String; var experience: String }
 
 // MARK: - API client
 
@@ -156,6 +158,21 @@ actor CarlAPI {
     func blockCompany(_ company: String, remove: Bool = false) async throws -> BlocklistResponse {
         struct Body: Codable { let company: String; let remove: Bool }
         return try await request("POST", "/v1/blocklist", body: Body(company: company, remove: remove))
+    }
+
+    /// Purchase the one-time résumé-builder unlock ($14.99).
+    func buyResumeBuilder(receipt: String? = nil) async throws -> EntitlementResponse {
+        struct Body: Codable { let productId: String; let receipt: String? }
+        return try await request("POST", "/v1/entitlements/purchase",
+                                 body: Body(productId: "com.carlapp.resumebuilder", receipt: receipt))
+    }
+
+    /// Generate a full résumé from the user's notes (requires the unlock).
+    func buildResume(_ input: ResumeBuildInput) async throws -> String {
+        struct Body: Codable { let input: ResumeBuildInput }
+        struct R: Codable { let resume: String }
+        let r: R = try await request("POST", "/v1/resume/build", body: Body(input: input))
+        return r.resume
     }
 
     func parseResume(text: String) async throws -> ParsedResume {

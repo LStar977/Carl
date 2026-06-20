@@ -84,13 +84,16 @@ real data, real money, real applications, and ship it.
        the backend.
 2. [ ] **Create the app** in App Store Connect (name "Carl", primary category
        e.g. Business / Productivity).
-3. [ ] **In-App Purchases** — create three **Consumable** products with IDs that
-       exactly match the app + `.storekit` config:
+3. [ ] **In-App Purchases** — create products with IDs that exactly match the app
+       + `.storekit` config. Three **Consumable** credit packs:
    - `com.carlapp.credits.starter` — Starter · 25 — $19
    - `com.carlapp.credits.popular` — Popular · 110 — $59
    - `com.carlapp.credits.pro` — Pro · 340 — $149
+       Plus one **Non-Consumable** unlock:
+   - `com.carlapp.resumebuilder` — Résumé Builder — $14.99
        Fill in display name, description, review screenshot. Submit them **with**
-       the app's first review.
+       the app's first review. (Tailored résumé is billed in credits, so it needs
+       no separate product.)
 4. [ ] **Tax & banking** (Agreements, Tax, and Banking) — required before IAPs
        can be sold.
 

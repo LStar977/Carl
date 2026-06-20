@@ -87,6 +87,31 @@ final class CarlStore {
         if let r = try? await api.profile() { blockedCompanies = r.blockedCompanies ?? [] }
     }
 
+    // MARK: Résumé builder (one-time $14.99 unlock)
+
+    var hasResumeBuilder = false
+
+    /// Buy the résumé-builder unlock via StoreKit (falls back to a direct grant
+    /// in dev when no StoreKit product is configured). Returns success.
+    func buyResumeBuilder() async -> Bool {
+        if let product = storeKit.product(id: StoreService.resumeBuilderID) {
+            guard let tx = await storeKit.purchase(product) else { return false }
+            _ = try? await api.buyResumeBuilder(receipt: tx.jwsRepresentation)
+        } else {
+            _ = try? await api.buyResumeBuilder()
+        }
+        hasResumeBuilder = true
+        Haptics.success()
+        return true
+    }
+
+    /// Generate a résumé from the user's notes and use it as their résumé.
+    func buildResume(_ input: ResumeBuildInput) async -> Bool {
+        guard let text = try? await api.buildResume(input) else { return false }
+        resumeText = text
+        return true
+    }
+
     func runSearch() async {
         search = try? await api.search(prefs: prefs)
     }

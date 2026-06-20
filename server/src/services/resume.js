@@ -63,3 +63,28 @@ function normalize(p, rawText = '') {
 }
 
 const titleCase = (s) => s.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
+
+/** Build a full résumé from the user's notes (premium one-time feature). */
+export async function buildResume(input = {}) {
+  const { name = '', role = '', years = '', skills = '', experience = '' } = input;
+  const out = await llmJSON({
+    system: 'You write a clean, professional, strictly truthful résumé from the candidate\'s notes. Respond with JSON only.',
+    prompt:
+      `Name: ${name}\nTarget role: ${role}\nYears: ${years}\nSkills: ${skills}\n` +
+      `Experience notes:\n"""${String(experience).slice(0, 5000)}"""\n\n` +
+      'Write a complete one-page résumé: a short summary, a skills line, experience with concise ' +
+      'bullet points, and education if mentioned. Use ONLY what the notes support — do not invent ' +
+      'employers, titles, or dates. Return JSON {"resume": string}.',
+    maxTokens: 1500,
+  });
+  return out?.resume || templateResume(input);
+}
+
+function templateResume({ name, role, years, skills, experience }) {
+  return [
+    name || 'Candidate',
+    [role, years ? `${years} years` : ''].filter(Boolean).join(' · '),
+    skills ? `\nSkills: ${skills}` : '',
+    experience ? `\nExperience:\n${experience}` : '',
+  ].filter(Boolean).join('\n');
+}

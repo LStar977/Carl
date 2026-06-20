@@ -46,6 +46,21 @@
       "productID" : "com.carlapp.credits.pro",
       "referenceName" : "Pro 340",
       "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "1004",
+      "localizations" : [
+        {
+          "description" : "Carl writes you a professional résumé from scratch",
+          "displayName" : "Résumé Builder",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.carlapp.resumebuilder",
+      "referenceName" : "Résumé Builder",
+      "type" : "NonConsumable"
     }
   ],
   "settings" : {
