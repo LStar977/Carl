@@ -111,6 +111,12 @@ route('POST', '/v1/entitlements/purchase', async (ctx) => {
   return { status: r.ok ? 200 : 400, body: r };
 });
 
+// Permanently delete the user's account + all their data (Apple requirement).
+route('POST', '/v1/account/delete', async (ctx) => {
+  store.deleteUser(ctx.user.id);
+  return { status: 200, body: { deleted: true } };
+});
+
 // Build a full résumé from the user's notes — requires the resumeBuilder unlock.
 route('POST', '/v1/resume/build', async (ctx) => {
   if (!hasEntitlement(ctx.user, 'resumeBuilder')) return { status: 402, body: { error: 'needs_purchase' } };

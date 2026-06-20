@@ -16,17 +16,23 @@ struct RootView: View {
                 ConnectionErrorView(retry: { Task { await store.retry() } },
                                     onDemo: { store.startDemo(); withAnimation { signedIn = true } })
             } else if signedIn {
-                MainTabView(onExitDemo: {
-                    store = CarlStore()
-                    withAnimation(.easeInOut) { signedIn = false }
-                    Task { await store.boot() }
-                })
+                MainTabView(
+                    onExitDemo: { resetToStart() },
+                    onAccountDeleted: { resetToStart() }
+                )
             } else {
                 OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
             }
         }
         .environment(store)
         .task { if !store.booted { await store.boot() } }
+    }
+
+    /// Fresh start: new session, back to onboarding (used by exit-demo + account deletion).
+    private func resetToStart() {
+        store = CarlStore()
+        withAnimation(.easeInOut) { signedIn = false }
+        Task { await store.boot() }
     }
 }
 
@@ -114,6 +120,7 @@ struct OnboardingFlow: View {
 
 struct MainTabView: View {
     var onExitDemo: () -> Void = {}
+    var onAccountDeleted: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var tab: CarlTab = .home
     @State private var showDetail = false
@@ -125,7 +132,7 @@ struct MainTabView: View {
                 case .home:     DashboardScreen(selectedTab: $tab, onOpenDetail: openDetail, onExitDemo: onExitDemo)
                 case .queue:    QueueScreen(selectedTab: $tab, onOpenDetail: openDetail)
                 case .activity: ActivityScreen(selectedTab: $tab, onOpenDetail: openDetail)
-                case .profile:  SettingsScreen(selectedTab: $tab, onExitDemo: onExitDemo)
+                case .profile:  SettingsScreen(selectedTab: $tab, onExitDemo: onExitDemo, onAccountDeleted: onAccountDeleted)
                 }
             }
             if showDetail {

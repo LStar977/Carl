@@ -126,9 +126,13 @@ enum CarlAPIError: Error { case http(Int), decoding, noToken }
 actor CarlAPI {
     static let shared = CarlAPI()
 
-    /// For the simulator, `localhost` reaches your Mac's localhost. On a device,
-    /// point this at your machine's LAN IP or deployed server.
+    /// Debug builds talk to the local dev server; Release builds talk to the
+    /// deployed backend. Set the production URL before shipping.
+    #if DEBUG
     var baseURL = URL(string: "http://localhost:8787")!
+    #else
+    var baseURL = URL(string: "https://api.carl.app")! // TODO: your deployed backend
+    #endif
     private var token: String?
 
     func setBaseURL(_ url: URL) { baseURL = url }
@@ -189,6 +193,11 @@ actor CarlAPI {
 
     func profile() async throws -> ProfileResponse {
         try await request("GET", "/v1/profile")
+    }
+
+    /// Permanently delete the user's account and all their data.
+    func deleteAccount() async throws {
+        let _: EmptyAck = try await request("POST", "/v1/account/delete")
     }
 
     func search(prefs: JobPrefs? = nil) async throws -> SearchResponse {

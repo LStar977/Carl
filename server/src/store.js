@@ -24,6 +24,18 @@ export const store = {
   },
   updateUser(u) { db.users.set(u.id, u); return u; },
 
+  /** Permanently delete a user and ALL their data (account deletion). */
+  deleteUser(userId) {
+    db.users.delete(userId);
+    db.profiles.delete(userId);
+    db.jobs.delete(userId);
+    db.matches.delete(userId);
+    db.applications.delete(userId);
+    db.activity.delete(userId);
+    db.tx.delete(userId);
+    // usedTx holds App Store transaction ids for replay protection (not PII).
+  },
+
   saveProfile(p) { db.profiles.set(p.userId, p); return p; },
   getProfile(userId) { return db.profiles.get(userId); },
 

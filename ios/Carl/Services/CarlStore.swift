@@ -127,6 +127,12 @@ final class CarlStore {
         if parsed == nil, let p = r.resume { parsed = p }
     }
 
+    /// Permanently delete the account + all data. Returns success.
+    func deleteAccount() async -> Bool {
+        if demo { return true }
+        do { try await api.deleteAccount(); return true } catch { return false }
+    }
+
     // Display helpers (real user data with friendly fallbacks).
     var firstName: String {
         String(contact.name.split(separator: " ").first ?? "")

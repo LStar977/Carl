@@ -692,9 +692,12 @@ struct ApplicationDetailScreen: View {
 struct SettingsScreen: View {
     var selectedTab: Binding<CarlTab> = .constant(.profile)
     var onExitDemo: () -> Void = {}
+    var onAccountDeleted: () -> Void = {}
     @Environment(CarlStore.self) private var store
     @State private var carlTalks = true
     @State private var showPaywall = false
+    @State private var showDeleteConfirm = false
+    @State private var deleting = false
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.settingsBG
@@ -789,7 +792,11 @@ struct SettingsScreen: View {
                         Divider().overlay(CarlColor.hairline).padding(.leading, 58)
                         SettingsRow(color: CarlColor.slate, title: "Privacy & data")
                         Divider().overlay(CarlColor.hairline).padding(.leading, 58)
-                        SettingsRow(color: CarlColor.red, title: "Purchase history", titleColor: CarlColor.red)
+                        Button { showDeleteConfirm = true } label: {
+                            SettingsRow(color: CarlColor.red, title: deleting ? "Deleting…" : "Delete account", titleColor: CarlColor.red)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(deleting)
                     }
                 }
                 .padding(.horizontal, 18)
@@ -801,6 +808,14 @@ struct SettingsScreen: View {
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallScreen(onPurchase: { showPaywall = false })
                 .environment(store)
+        }
+        .alert("Delete account?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task { deleting = true; _ = await store.deleteAccount(); deleting = false; onAccountDeleted() }
+            }
+        } message: {
+            Text("This permanently deletes your résumé, preferences, and application history. This can't be undone.")
         }
     }
 

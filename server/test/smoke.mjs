@@ -122,6 +122,12 @@ try {
   const detail = await api('GET', `/v1/applications/${m1}`);
   check('detail returns submitted application', detail.json.application?.status === 'applied');
 
+  console.log('\nAccount deletion');
+  const del = await api('POST', '/v1/account/delete');
+  check('account delete returns deleted:true', del.json.deleted === true, JSON.stringify(del.json));
+  const afterDel = await api('GET', '/v1/dashboard');
+  check('data is gone after deletion (token no longer valid)', afterDel.status === 401, `status=${afterDel.status}`);
+
   console.log(`\n${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed\n`);
 } catch (err) {
   console.error('Smoke test crashed:', err);

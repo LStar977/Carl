@@ -70,9 +70,10 @@ real data, real money, real applications, and ship it.
        and CORS locked to your app's needs.
 4. [ ] **Deploy.** Set all env vars on the host. Keep `APPLY_MODE=dry-run` for
        now. Note the public URL.
-5. [ ] **Point the app at it:** set `CarlAPI.shared.baseURL` to the deployed URL
-       (`ios/Carl/Services/CarlAPI.swift`) — ideally via a build setting so debug
-       uses localhost and release uses production.
+5. [~] **Point the app at it:** the Debug/Release split is wired
+       (`ios/Carl/Services/CarlAPI.swift` uses `#if DEBUG` → localhost, else
+       production). **Set the production URL** in the `#else` branch (currently a
+       `https://api.carl.app` placeholder) to your deployed backend.
 
 ---
 
@@ -126,8 +127,9 @@ take this seriously; it's also an App Review focus.
        Carl submits applications on the user's behalf, and data retention.
 2. [ ] **App Privacy "nutrition labels"** in App Store Connect — declare the data
        you collect (résumé/contact/usage) and how it's used.
-3. [ ] **Account deletion** in-app (Apple requires it for accounts) + a backend
-       endpoint that purges the user's data.
+3. [x] **Account deletion** — done. Settings → "Delete account" (confirm) calls
+       `POST /v1/account/delete`, which purges the user's data (`store.deleteUser`),
+       then the app resets to onboarding.
 4. [ ] **Consent**: explicit opt-in before Carl applies on the user's behalf, and
        clear copy that a credit is only spent on a real submission.
 5. [ ] If you connect a mailbox for status tracking later, that needs its own
