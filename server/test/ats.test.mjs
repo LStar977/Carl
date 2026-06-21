@@ -56,6 +56,19 @@ ok(titleMatches('Senior Product Designer', kw) === true, 'matching title kept');
 ok(titleMatches('Backend Engineer', kw) === false, 'off-target title dropped');
 ok(titleMatches('anything', { primary: '' }) === true, 'no target title keeps everything');
 
+// "Product Manager" should match PRODUCT roles, not every "Manager"
+const kwPM = titleKeywords({ titles: ['Product Manager'] });
+ok(kwPM.primary === 'product', 'generic "manager" suffix dropped; primary is "product"');
+ok(titleMatches('Senior Product Manager', kwPM) === true, 'product manager kept');
+ok(titleMatches('Group Product Lead', kwPM) === true, 'product lead kept');
+ok(titleMatches('Engineering Manager', kwPM) === false, 'unrelated manager dropped');
+ok(titleMatches('Account Manager', kwPM) === false, 'account manager dropped');
+// Multi-word roles cast a wider, relevant net (OR over domain words)
+const kwGM = titleKeywords({ titles: ['Growth Marketing'] });
+ok(titleMatches('Head of Growth', kwGM) === true, 'growth role kept via "growth"');
+ok(titleMatches('Content Marketing Manager', kwGM) === true, 'marketing role kept via "marketing"');
+ok(titleMatches('Backend Engineer', kwGM) === false, 'unrelated role dropped');
+
 // --- Market filtering (US/Canada) -------------------------------------------
 ok(marketOk({ location: 'Toronto, Canada' }) === true, 'canada kept');
 ok(marketOk({ location: 'Austin, TX' }) === true, 'us kept');

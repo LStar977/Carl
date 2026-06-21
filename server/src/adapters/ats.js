@@ -14,8 +14,13 @@ const boardCache = new Map(); // url -> { at, jobs }
 
 // Title words that describe seniority/structure, not the role itself.
 const STOP = new Set([
-  'senior', 'junior', 'mid', 'staff', 'lead', 'principal', 'sr', 'jr',
-  'i', 'ii', 'iii', 'the', 'of', 'and', 'a', 'an',
+  'senior', 'junior', 'mid', 'staff', 'lead', 'leader', 'principal', 'sr', 'jr',
+  'i', 'ii', 'iii', 'iv', 'the', 'of', 'and', 'a', 'an', 'for', 'to', 'in', 'at',
+  // Generic role suffixes — keep the *domain* word ("product"), not the suffix,
+  // so "Product Manager" matches product roles instead of every "Manager".
+  'manager', 'mgr', 'director', 'head', 'vp', 'chief', 'officer', 'associate',
+  'specialist', 'coordinator', 'representative', 'rep', 'intern', 'contractor',
+  'remote', 'hybrid', 'onsite',
 ]);
 
 // Locations that are clearly outside the US/Canada launch market.
@@ -191,13 +196,20 @@ export function filterJobs(jobs, prefs) {
 
 export function titleKeywords(prefs) {
   const raw = (prefs?.titles?.[0] || prefs?.targetRole || '').toLowerCase();
-  const words = raw.split(/[^a-z0-9+]+/).filter((w) => w && !STOP.has(w));
-  return { primary: words[words.length - 1] || '', all: words };
+  const words = raw.split(/[^a-z0-9+]+/).filter((w) => w && w.length >= 2 && !STOP.has(w));
+  // Most distinctive (longest) domain word as primary; all content words kept.
+  const primary = words.length ? words.reduce((a, b) => (b.length > a.length ? b : a)) : '';
+  return { primary, all: words };
 }
 
+// A job matches if its title contains ANY of the target's domain keywords. This
+// gives good recall for multi-word roles ("Product Manager" → product roles)
+// while the fit score downstream ranks the most relevant first.
 export function titleMatches(title, kw) {
-  if (!kw.primary) return true; // no target title yet — keep everything
-  return (title || '').toLowerCase().includes(kw.primary);
+  const all = kw.all || [];
+  if (!all.length) return true; // no target title yet — keep everything
+  const t = (title || '').toLowerCase();
+  return all.some((w) => t.includes(w));
 }
 
 export function marketOk(job) {
