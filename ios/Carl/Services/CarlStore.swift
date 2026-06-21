@@ -125,6 +125,11 @@ final class CarlStore {
         if let c = r.contact, !c.name.isEmpty || !c.email.isEmpty { contact = c }
         if let e = r.eligibility { eligibility = e }
         if parsed == nil, let p = r.resume { parsed = p }
+        // Adopt saved preferences (only if the server actually has some, so we
+        // never wipe in-memory defaults for a brand-new profile).
+        if let p = r.prefs, (p.titles?.isEmpty == false || p.locations?.isEmpty == false || p.location != nil) {
+            prefs = p
+        }
     }
 
     /// Permanently delete the account + all data. Returns success.

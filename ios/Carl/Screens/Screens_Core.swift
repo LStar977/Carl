@@ -592,6 +592,119 @@ struct DraftEditSheet: View {
     }
 }
 
+/// Edit role, cities, work style, and pay after onboarding — without redoing it.
+struct EditPreferencesSheet: View {
+    @Environment(CarlStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var role = ""
+    @State private var cities = ""
+    @State private var workStyle = "any"
+    @State private var payChoice = "Any"
+    @State private var saving = false
+
+    private let styles: [(String, String)] = [("Remote", "remote"), ("Hybrid", "hybrid"), ("On-site", "onsite"), ("Any", "any")]
+    private let pays = ["Any", "$80k+", "$100k+", "$130k+", "$160k+", "$200k+"]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    field("Role / title") {
+                        TextField("e.g. Product Manager", text: $role)
+                            .carlFont(15, .medium).foregroundStyle(CarlColor.navy)
+                            .textInputAutocapitalization(.words)
+                            .padding(14)
+                            .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    field("Cities you're open to") {
+                        VStack(alignment: .leading, spacing: 7) {
+                            TextField("e.g. Calgary, Vancouver, Toronto", text: $cities)
+                                .carlFont(15, .medium).foregroundStyle(CarlColor.navy)
+                                .autocorrectionDisabled()
+                                .padding(14)
+                                .background(CarlColor.tintFillAlt, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Text("Separate with commas. Carl also includes remote roles.")
+                                .carl(12, .medium).foregroundStyle(CarlColor.textFaint)
+                        }
+                    }
+                    field("Work style") {
+                        chips(styles.map { $0.0 }, selected: styleLabel) { picked in
+                            workStyle = styles.first { $0.0 == picked }?.1 ?? "any"
+                        }
+                    }
+                    field("Minimum pay") {
+                        chips(pays, selected: payChoice) { payChoice = $0 }
+                    }
+                }
+                .padding(20)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(CarlColor.screenBG)
+            .navigationTitle("Job preferences")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Saving…" : "Save") { Task { await save() } }.bold().disabled(saving)
+                }
+            }
+        }
+        .onAppear(perform: load)
+    }
+
+    private var styleLabel: String { styles.first { $0.1 == workStyle }?.0 ?? "Any" }
+
+    @ViewBuilder private func field<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title.uppercased()).carl(12, .bold).foregroundStyle(CarlColor.textFaint).tracking(0.6)
+            content()
+        }
+    }
+
+    @ViewBuilder private func chips(_ labels: [String], selected: String, onTap: @escaping (String) -> Void) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 86), spacing: 9)], alignment: .leading, spacing: 9) {
+            ForEach(labels, id: \.self) { label in
+                let on = label == selected
+                Button { onTap(label) } label: {
+                    Text(label).carl(14, .semibold)
+                        .foregroundStyle(on ? .white : CarlColor.navy)
+                        .frame(maxWidth: .infinity).frame(height: 38)
+                        .background(on ? CarlColor.royal : CarlColor.card, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 11).stroke(on ? Color.clear : CarlColor.hairline, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func load() {
+        role = store.prefs.titles?.first ?? ""
+        let list = store.prefs.locations ?? store.prefs.location.map { [$0] } ?? []
+        cities = list.joined(separator: ", ")
+        workStyle = store.prefs.locationType ?? "any"
+        if let p = store.prefs.payFloor, p > 0 {
+            let nums = pays.dropFirst().compactMap { Int($0.filter(\.isNumber)) }
+            if let exact = pays.first(where: { $0.filter(\.isNumber) == String(p) }) { payChoice = exact }
+            else if let below = nums.filter({ $0 <= p }).max() { payChoice = "$\(below)k+" }
+            else { payChoice = "Any" }
+        } else { payChoice = "Any" }
+    }
+
+    private func save() async {
+        saving = true
+        let r = role.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.prefs.titles = r.isEmpty ? nil : [r]
+        let cityList = cities.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        store.prefs.locations = cityList.isEmpty ? nil : cityList
+        store.prefs.location = cityList.first
+        store.prefs.locationType = workStyle
+        store.prefs.payFloor = payChoice == "Any" ? nil : Int(payChoice.filter(\.isNumber))
+        await store.savePreferences()
+        saving = false
+        dismiss()
+    }
+}
+
 struct ApplicationDetailScreen: View {
     var onBack: () -> Void = {}
     var body: some View {
@@ -698,7 +811,20 @@ struct SettingsScreen: View {
     @State private var carlTalks = true
     @State private var showPaywall = false
     @State private var showDeleteConfirm = false
+    @State private var showEditPrefs = false
     @State private var deleting = false
+
+    private var prefsSummary: String {
+        let role = store.prefs.titles?.first ?? "Any role"
+        let style = (store.prefs.locationType ?? "any").capitalized
+        let cities = store.prefs.locations ?? store.prefs.location.map { [$0] } ?? []
+        let where_ = cities.isEmpty ? style : "\(cities.count) cities · \(style)"
+        return "\(role) · \(where_)"
+    }
+    private var paySummary: String {
+        if let p = store.prefs.payFloor, p > 0 { return "$\(p)k+" }
+        return "Any"
+    }
     var body: some View {
         PhoneFrame(chrome: .dark) {
             CarlColor.settingsBG
@@ -745,9 +871,15 @@ struct SettingsScreen: View {
                     settingsGroup("Resume & preferences") {
                         SettingsRow(color: CarlColor.royal, title: "Edit resume")
                         Divider().overlay(CarlColor.hairline).padding(.leading, 58)
-                        SettingsRow(color: CarlColor.greenhouse, title: "Job preferences", value: "Design · Remote")
+                        Button { showEditPrefs = true } label: {
+                            SettingsRow(color: CarlColor.greenhouse, title: "Job preferences", value: prefsSummary)
+                        }
+                        .buttonStyle(.plain)
                         Divider().overlay(CarlColor.hairline).padding(.leading, 58)
-                        SettingsRow(color: CarlColor.lever, title: "Pay floor", value: "$130k")
+                        Button { showEditPrefs = true } label: {
+                            SettingsRow(color: CarlColor.lever, title: "Pay", value: paySummary)
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     settingsGroup("Won't apply to") {
@@ -809,6 +941,9 @@ struct SettingsScreen: View {
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallScreen(onPurchase: { showPaywall = false })
                 .environment(store)
+        }
+        .sheet(isPresented: $showEditPrefs) {
+            EditPreferencesSheet().environment(store)
         }
         .alert("Delete account?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
