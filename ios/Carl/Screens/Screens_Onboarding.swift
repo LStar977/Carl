@@ -40,7 +40,7 @@ struct MeetCarlScreen: View {
                                 .rotationEffect(.degrees(45))
                                 .offset(y: -7)
                         }
-                        Text("Tell me what you want. I'll search, match, and apply — while you do literally anything else.")
+                        Text("Tell me what you want. I'll find the roles and write every application — you just review and send.")
                             .carl(15, .medium)
                             .foregroundStyle(.white.opacity(0.72))
                             .multilineTextAlignment(.center)
