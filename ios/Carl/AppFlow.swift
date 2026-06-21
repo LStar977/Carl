@@ -7,6 +7,8 @@ enum CarlTab { case home, queue, activity, profile }
 struct RootView: View {
     @State private var store = CarlStore()
     @State private var signedIn = false
+    // Persisted: once real onboarding is done we skip it on every later launch.
+    @AppStorage("carl.onboarded") private var onboarded = false
 
     var body: some View {
         Group {
@@ -15,13 +17,16 @@ struct RootView: View {
             } else if !store.connected {
                 ConnectionErrorView(retry: { Task { await store.retry() } },
                                     onDemo: { store.startDemo(); withAnimation { signedIn = true } })
-            } else if signedIn {
+            } else if signedIn || (onboarded && !store.demo) {
                 MainTabView(
                     onExitDemo: { resetToStart() },
                     onAccountDeleted: { resetToStart() }
                 )
             } else {
-                OnboardingFlow(onFinished: { withAnimation(.easeInOut) { signedIn = true } })
+                OnboardingFlow(onFinished: {
+                    if !store.demo { onboarded = true } // don't persist a demo as real onboarding
+                    withAnimation(.easeInOut) { signedIn = true }
+                })
             }
         }
         .environment(store)
@@ -30,9 +35,10 @@ struct RootView: View {
 
     /// Fresh start: new session, back to onboarding (used by exit-demo + account deletion).
     private func resetToStart() {
+        onboarded = false
         store = CarlStore()
         withAnimation(.easeInOut) { signedIn = false }
-        Task { await store.boot() }
+        Task { await store.resetSession() }
     }
 }
 

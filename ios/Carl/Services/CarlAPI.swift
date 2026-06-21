@@ -138,9 +138,20 @@ actor CarlAPI {
     #else
     var baseURL = URL(string: "https://carl-server-deployment.replit.app")!
     #endif
-    private var token: String?
+    private static let tokenKey = "carl.token"
+    // Restore the saved session token on launch so the user stays signed in.
+    private var token: String? = UserDefaults.standard.string(forKey: CarlAPI.tokenKey)
 
     func setBaseURL(_ url: URL) { baseURL = url }
+
+    /// Whether a session token is already stored (from a previous launch).
+    func hasSession() -> Bool { token != nil }
+
+    /// Forget the session (used on account deletion / exit-demo reset).
+    func clearSession() {
+        token = nil
+        UserDefaults.standard.removeObject(forKey: Self.tokenKey)
+    }
 
     // Flow ---------------------------------------------------------------
 
@@ -148,6 +159,7 @@ actor CarlAPI {
     func authAnon() async throws -> AuthResponse {
         let res: AuthResponse = try await request("POST", "/v1/auth/anon", auth: false)
         token = res.token
+        UserDefaults.standard.set(res.token, forKey: Self.tokenKey) // persist across launches
         return res
     }
 

@@ -39,7 +39,14 @@ final class CarlStore {
     func boot() async {
         if demo { booted = true; connected = true; return }
         do {
-            _ = try await api.authAnon()
+            if await api.hasSession() {
+                // Reuse the saved session. Verify the token still resolves a
+                // user; if the server lost it, fall back to a fresh session.
+                do { _ = try await api.profile() }
+                catch { await api.clearSession(); _ = try await api.authAnon() }
+            } else {
+                _ = try await api.authAnon()
+            }
             connected = true
         } catch {
             connected = false
@@ -50,6 +57,13 @@ final class CarlStore {
         await loadProfile()
         await storeKit.load()
         booted = true
+    }
+
+    /// Forget the current session and start a fresh one (exit-demo / deletion).
+    func resetSession() async {
+        await api.clearSession()
+        booted = false
+        await boot()
     }
 
     func retry() async {
