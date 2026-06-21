@@ -14,14 +14,22 @@ export function classifyTier(job) {
 export async function draftApplication(profile, job) {
   const parsed = profile?.resume?.parsed || {};
   const elig = profile?.eligibility || {};
+  const name = profile?.contact?.name || parsed?.contact?.name || '';
   const drafted = await llmJSON({
-    system: 'You are Carl, drafting a concise, genuine job application. Respond with JSON only.',
+    system:
+      'You are an expert career assistant writing a job application on behalf of a candidate. ' +
+      "Write everything in the candidate's OWN first-person voice, as if they wrote it themselves. " +
+      'NEVER refer to yourself, never mention "Carl", never say you are an AI, and never begin with ' +
+      '"Hi, I\'m..." or any salutation. Be specific, genuine, and concise. Respond with JSON only.',
     prompt:
-      `Candidate: ${parsed.targetRole}, ${parsed.years} yrs, skills: ${(parsed.skills || []).join(', ')}.\n` +
+      (name ? `The candidate is ${name}.\n` : '') +
+      `Candidate background: ${parsed.targetRole || 'professional'}, ${parsed.years || ''} yrs experience, ` +
+      `skills: ${(parsed.skills || []).join(', ')}.\n` +
       `Job: ${job.title} at ${job.company} (${job.location}).\n` +
-      `${job.descriptionSnippet}\n` +
+      `${job.descriptionSnippet || ''}\n` +
       `Facts to use truthfully in answers: ${eligibilityFacts(elig)}\n\n` +
-      'Return JSON {"coverNote": string (2-3 sentences, first person), ' +
+      'Write as the candidate applying to this specific job. ' +
+      'Return JSON {"coverNote": string (2-3 sentences, first person, no salutation), ' +
       '"answers": [{"question": string, "answer": string}] (1-2 items)}',
     maxTokens: 500,
   });

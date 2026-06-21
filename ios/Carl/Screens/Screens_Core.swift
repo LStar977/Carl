@@ -61,7 +61,7 @@ struct QueueScreen: View {
                                 } else {
                                     collapsedCard(item)
                                         .contentShape(Rectangle())
-                                        .onTapGesture(perform: onOpenDetail)
+                                        .onTapGesture { applyingItem = item }
                                 }
                             }
                             Button { Task { await store.findMoreJobs() } } label: {
