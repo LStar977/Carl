@@ -91,7 +91,7 @@ struct InterviewScreen: View {
         Question(field: .work, prompt: "What kind of work are you after?", chips: [], placeholder: "e.g. Product Designer"),
         Question(field: .location, prompt: "Where do you want to work?", chips: ["Remote", "Hybrid", "On-site", "Open to relocating"], placeholder: nil),
         Question(field: .area, prompt: "Which cities are you open to?", chips: ["Remote — anywhere"], placeholder: "e.g. Calgary, Vancouver, Toronto"),
-        Question(field: .pay, prompt: "What pay are you aiming for?", chips: ["$80k+", "$100k+", "$130k+", "$160k+", "$200k+"], placeholder: nil),
+        Question(field: .pay, prompt: "What pay are you aiming for?", chips: ["Any", "$80k+", "$100k+", "$130k+", "$160k+", "$200k+"], placeholder: nil),
         Question(field: .jobType, prompt: "And the job type?", chips: ["Full-time", "Part-time", "Contract"], placeholder: nil),
     ]
 
@@ -240,8 +240,12 @@ struct InterviewScreen: View {
                 store.prefs.location = cities.first   // keep legacy field populated
             }
         case .pay:
-            let digits = value.filter(\.isNumber)
-            if let n = Int(digits) { store.prefs.payFloor = n }
+            if value.lowercased().hasPrefix("any") || value.isEmpty {
+                store.prefs.payFloor = nil   // no salary filter — show all pay levels
+            } else {
+                let digits = value.filter(\.isNumber)
+                if let n = Int(digits) { store.prefs.payFloor = n }
+            }
         case .jobType:
             store.prefs.workType = value.lowercased().replacingOccurrences(of: " ", with: "-")
         }
