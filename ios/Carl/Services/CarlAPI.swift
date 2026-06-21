@@ -34,11 +34,13 @@ struct ParsedResume: Codable {
 
 struct JobPrefs: Codable {
     var titles: [String]?
-    var locationType: String?   // remote | hybrid | onsite | any
-    var location: String?
-    var country: String?        // us | ca | uk | au
+    var locationType: String?    // remote | hybrid | onsite | any
+    var location: String?        // legacy single city (kept for back-compat)
+    var locations: [String]?     // cities the user is open to — any one matches
+    var remoteCountries: [String]? // optional remote scope, e.g. ["US","CA"]
+    var country: String?         // us | ca | uk | au
     var payFloor: Int?
-    var workType: String?       // full-time | part-time | contract
+    var workType: String?        // full-time | part-time | contract
 }
 
 struct SourceCount: Codable, Identifiable { let name: String; let found: Int; var id: String { name } }

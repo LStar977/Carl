@@ -96,14 +96,34 @@ const METRO_ALIASES = {
  */
 function locationEligible(prefs, job) {
   const want = (prefs?.locationType || 'any').toLowerCase();
-  if (job.remoteType === 'remote') return true; // remote is open to any city
-  if (want === 'remote') return false;          // wants remote only → drop onsite
+  const cities = wantedCities(prefs);
 
-  const city = (prefs?.location || '').split(',')[0].trim().toLowerCase();
-  if (!city) return true;                        // no city set → no city filter
+  if (job.remoteType === 'remote') {
+    // Optional remote scoping (e.g. "remote in the US"). Only excludes when the
+    // job's country is known and not in the allow-list — never over-filters.
+    const scope = (prefs?.remoteCountries || []).map((c) => String(c).toUpperCase());
+    if (scope.length && job.country) return scope.includes(String(job.country).toUpperCase());
+    return true;                                 // remote is open to any city
+  }
+  if (want === 'remote') return false;           // wants remote only → drop onsite
+
+  if (!cities.length) return true;               // no city set → no city filter
   const loc = (job.location || '').toLowerCase();
   if (!loc) return false;                        // can't confirm an onsite role is in-city
-  return cityMatches(city, loc);
+  return cities.some((c) => cityMatches(c, loc)); // eligible if it's in ANY wanted city
+}
+
+/** All cities the user is open to, lowercased. Supports a list (`locations`) and
+ *  the legacy single `location`; de-duplicated. */
+function wantedCities(prefs) {
+  const list = Array.isArray(prefs?.locations) ? prefs.locations : [];
+  const raw = [...list, prefs?.location];
+  const out = [];
+  for (const c of raw) {
+    const city = String(c || '').split(',')[0].trim().toLowerCase();
+    if (city && !out.includes(city)) out.push(city);
+  }
+  return out;
 }
 
 /** Aliases for a city the user typed — by canonical key or reverse alias match. */

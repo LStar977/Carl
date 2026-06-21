@@ -90,7 +90,7 @@ struct InterviewScreen: View {
     private let questions: [Question] = [
         Question(field: .work, prompt: "What kind of work are you after?", chips: [], placeholder: "e.g. Product Designer"),
         Question(field: .location, prompt: "Where do you want to work?", chips: ["Remote", "Hybrid", "On-site", "Open to relocating"], placeholder: nil),
-        Question(field: .area, prompt: "Which city or area?", chips: ["Remote — anywhere"], placeholder: "e.g. Toronto"),
+        Question(field: .area, prompt: "Which cities are you open to?", chips: ["Remote — anywhere"], placeholder: "e.g. Calgary, Vancouver, Toronto"),
         Question(field: .pay, prompt: "What pay are you aiming for?", chips: ["$80k+", "$100k+", "$130k+", "$160k+", "$200k+"], placeholder: nil),
         Question(field: .jobType, prompt: "And the job type?", chips: ["Full-time", "Part-time", "Contract"], placeholder: nil),
     ]
@@ -199,7 +199,7 @@ struct InterviewScreen: View {
     private func demoAnswer(for field: Field) -> String {
         switch field {
         case .work: return "Product Designer"
-        case .area: return "Toronto"
+        case .area: return "Calgary, Vancouver, Toronto"
         default: return ""
         }
     }
@@ -227,7 +227,18 @@ struct InterviewScreen: View {
         case .location:
             store.prefs.locationType = ["Remote": "remote", "Hybrid": "hybrid", "On-site": "onsite"][value] ?? "any"
         case .area:
-            store.prefs.location = (value.isEmpty || value.hasPrefix("Remote")) ? nil : value
+            if value.isEmpty || value.hasPrefix("Remote") {
+                store.prefs.locations = nil
+                store.prefs.location = nil
+            } else {
+                // Accept a comma-separated list — "Calgary, Vancouver, Toronto".
+                let cities = value
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                store.prefs.locations = cities
+                store.prefs.location = cities.first   // keep legacy field populated
+            }
         case .pay:
             let digits = value.filter(\.isNumber)
             if let n = Int(digits) { store.prefs.payFloor = n }

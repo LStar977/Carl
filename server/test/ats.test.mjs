@@ -87,6 +87,34 @@ ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
 const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
 ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');
 
+// --- Multi-city: open to several cities + remote ----------------------------
+const multiJobs = [
+  { id: 'm_yyc', title: 'Product Designer', location: 'Calgary, AB', remoteType: 'onsite', payFloor: 0 },
+  { id: 'm_van', title: 'Product Designer', location: 'Vancouver, BC', remoteType: 'onsite', payFloor: 0 },
+  { id: 'm_tor', title: 'Product Designer', location: 'Toronto, ON', remoteType: 'onsite', payFloor: 0 },
+  { id: 'm_aus', title: 'Product Designer', location: 'Austin, TX', remoteType: 'onsite', payFloor: 0 },
+  { id: 'm_rus', title: 'Product Designer', location: 'Remote - US', remoteType: 'remote', country: 'US', payFloor: 0 },
+  { id: 'm_rca', title: 'Product Designer', location: 'Remote - Canada', remoteType: 'remote', country: 'CA', payFloor: 0 },
+];
+const openTo = scoreMatches(
+  {},
+  { titles: ['Product Designer'], locations: ['Calgary', 'Vancouver', 'Toronto'], locationType: 'any' },
+  multiJobs,
+).map((j) => j.id);
+ok(openTo.includes('m_yyc') && openTo.includes('m_van') && openTo.includes('m_tor'), 'all three wanted cities kept');
+ok(!openTo.includes('m_aus'), 'a city not on the list (Austin) is dropped');
+ok(openTo.includes('m_rus') && openTo.includes('m_rca'), 'remote roles eligible when not onsite-only');
+
+// remote scoping: "remote in the US only"
+const usRemoteOnly = scoreMatches(
+  {},
+  { titles: ['Product Designer'], locations: ['Calgary'], locationType: 'any', remoteCountries: ['US'] },
+  multiJobs,
+).map((j) => j.id);
+ok(usRemoteOnly.includes('m_rus'), 'US remote kept under US remote scope');
+ok(!usRemoteOnly.includes('m_rca'), 'Canada remote dropped under US-only remote scope');
+ok(usRemoteOnly.includes('m_yyc'), 'home city (Calgary) still kept alongside remote scope');
+
 // --- Expanded metro matching (top ~50 metros) -------------------------------
 const metroJobs = [
   { id: 'sf1', title: 'Product Designer', location: 'San Francisco, CA', remoteType: 'onsite', payFloor: 0 },
