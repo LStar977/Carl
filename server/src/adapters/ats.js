@@ -195,8 +195,13 @@ export function filterJobs(jobs, prefs) {
 }
 
 export function titleKeywords(prefs) {
-  const raw = (prefs?.titles?.[0] || prefs?.targetRole || '').toLowerCase();
-  const words = raw.split(/[^a-z0-9+]+/).filter((w) => w && w.length >= 2 && !STOP.has(w));
+  // Aggregate keywords across ALL chosen roles (the user can pick several);
+  // fall back to the résumé's parsed role only if no titles are set.
+  const titles = Array.isArray(prefs?.titles) && prefs.titles.length
+    ? prefs.titles
+    : (prefs?.targetRole ? [prefs.targetRole] : []);
+  const raw = titles.join(' ').toLowerCase();
+  const words = [...new Set(raw.split(/[^a-z0-9+]+/).filter((w) => w && w.length >= 2 && !STOP.has(w)))];
   // Most distinctive (longest) domain word as primary; all content words kept.
   const primary = words.length ? words.reduce((a, b) => (b.length > a.length ? b : a)) : '';
   return { primary, all: words };

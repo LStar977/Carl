@@ -609,8 +609,8 @@ struct EditPreferencesSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    field("Role / title") {
-                        TextField("e.g. Product Manager", text: $role)
+                    field("Roles / titles") {
+                        TextField("e.g. Product Manager, Marketing, Sales", text: $role)
                             .carlFont(15, .medium).foregroundStyle(CarlColor.navy)
                             .textInputAutocapitalization(.words)
                             .padding(14)
@@ -678,7 +678,7 @@ struct EditPreferencesSheet: View {
     }
 
     private func load() {
-        role = store.prefs.titles?.first ?? ""
+        role = (store.prefs.titles ?? []).joined(separator: ", ")
         let list = store.prefs.locations ?? store.prefs.location.map { [$0] } ?? []
         cities = list.joined(separator: ", ")
         workStyle = store.prefs.locationType ?? "any"
@@ -692,8 +692,8 @@ struct EditPreferencesSheet: View {
 
     private func save() async {
         saving = true
-        let r = role.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.prefs.titles = r.isEmpty ? nil : [r]
+        let roleList = role.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        store.prefs.titles = roleList.isEmpty ? nil : roleList
         let cityList = cities.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         store.prefs.locations = cityList.isEmpty ? nil : cityList
         store.prefs.location = cityList.first
@@ -815,7 +815,8 @@ struct SettingsScreen: View {
     @State private var deleting = false
 
     private var prefsSummary: String {
-        let role = store.prefs.titles?.first ?? "Any role"
+        let titles = store.prefs.titles ?? []
+        let role = titles.isEmpty ? "Any role" : (titles.count == 1 ? titles[0] : "\(titles.count) roles")
         let style = (store.prefs.locationType ?? "any").capitalized
         let cities = store.prefs.locations ?? store.prefs.location.map { [$0] } ?? []
         let where_ = cities.isEmpty ? style : "\(cities.count) cities · \(style)"

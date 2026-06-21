@@ -68,6 +68,14 @@ const kwGM = titleKeywords({ titles: ['Growth Marketing'] });
 ok(titleMatches('Head of Growth', kwGM) === true, 'growth role kept via "growth"');
 ok(titleMatches('Content Marketing Manager', kwGM) === true, 'marketing role kept via "marketing"');
 ok(titleMatches('Backend Engineer', kwGM) === false, 'unrelated role dropped');
+// Multiple chosen role fields aggregate across all of them
+const kwMulti = titleKeywords({ titles: ['Product Manager', 'Marketing', 'Sales'] });
+ok(kwMulti.all.includes('product') && kwMulti.all.includes('marketing') && kwMulti.all.includes('sales'),
+   'keywords aggregate across all chosen roles');
+ok(titleMatches('Senior Product Manager', kwMulti) === true, 'multi: product role kept');
+ok(titleMatches('Field Marketing Lead', kwMulti) === true, 'multi: marketing role kept');
+ok(titleMatches('Account Executive (Sales)', kwMulti) === true, 'multi: sales role kept');
+ok(titleMatches('Backend Engineer', kwMulti) === false, 'multi: unrelated role dropped');
 
 // --- Market filtering (US/Canada) -------------------------------------------
 ok(marketOk({ location: 'Toronto, Canada' }) === true, 'canada kept');

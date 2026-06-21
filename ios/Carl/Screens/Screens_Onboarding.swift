@@ -98,7 +98,13 @@ struct InterviewScreen: View {
     @State private var step = 0
     @State private var messages: [Msg] = []
     @State private var draft = ""
+    @State private var selectedRoles: Set<String> = []
     @FocusState private var inputFocused: Bool
+
+    /// Common role fields the user can multi-select on the first question.
+    private let roleFields = ["Product Manager", "Marketing", "Sales", "Venture Capital",
+                              "Business Development", "Engineering", "Design", "Data & Analytics",
+                              "Operations", "Finance", "Customer Success", "Recruiting"]
 
     private var current: Question? { step < questions.count ? questions[step] : nil }
 
@@ -162,10 +168,13 @@ struct InterviewScreen: View {
     @ViewBuilder
     private func inputArea(for q: Question) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if !q.chips.isEmpty {
+            if q.field == .work {
+                workInput()
+            }
+            if q.field != .work, !q.chips.isEmpty {
                 FlowChips(q.chips) { answer($0) }
             }
-            if let placeholder = q.placeholder {
+            if q.field != .work, let placeholder = q.placeholder {
                 HStack(spacing: 10) {
                     TextField(placeholder, text: $draft)
                         .carlFont(15, .medium)
@@ -195,10 +204,78 @@ struct InterviewScreen: View {
         }
     }
 
+    /// Multi-select role fields (+ a custom add) for the first question.
+    @ViewBuilder private func workInput() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 108), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(roleFields, id: \.self) { label in
+                    let on = selectedRoles.contains(label)
+                    Button {
+                        if on { selectedRoles.remove(label) } else { selectedRoles.insert(label) }
+                    } label: {
+                        Text(label).carl(13, .semibold)
+                            .foregroundStyle(on ? .white : CarlColor.navy)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                            .padding(.horizontal, 12).frame(height: 36).frame(maxWidth: .infinity)
+                            .background(on ? CarlColor.royal : CarlColor.card, in: Capsule())
+                            .overlay(Capsule().stroke(on ? Color.clear : CarlColor.hairline, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            HStack(spacing: 10) {
+                TextField("Add another role…", text: $draft)
+                    .carlFont(15, .medium).foregroundStyle(CarlColor.navy)
+                    .focused($inputFocused).submitLabel(.done)
+                    .onSubmit { addCustomRole() }
+                Button { addCustomRole() } label: {
+                    Image(systemName: "plus").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(CarlColor.royal, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .padding(.leading, 16).padding(5)
+            .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(CarlColor.hairline, lineWidth: 1))
+
+            Button { commitWork() } label: {
+                Text("Continue").carl(16, .bold).foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 50)
+                    .background(canContinueWork ? CarlColor.royal : CarlColor.royal.opacity(0.4),
+                                in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canContinueWork)
+        }
+        .onAppear {
+            if store.demo && selectedRoles.isEmpty { selectedRoles = ["Product Manager", "Marketing"] }
+        }
+    }
+
+    private var canContinueWork: Bool {
+        !selectedRoles.isEmpty || !draft.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private func addCustomRole() {
+        let v = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !v.isEmpty else { return }
+        selectedRoles.insert(v)
+        draft = ""
+    }
+
+    private func commitWork() {
+        addCustomRole()
+        let roles = Array(selectedRoles)
+        store.prefs.titles = roles.isEmpty ? nil : roles
+        if !roles.isEmpty { messages.append(Msg(text: roles.joined(separator: ", "), mine: true)) }
+        advance()
+    }
+
     /// Realistic pre-filled answers so the demo walkthrough needs no typing.
     private func demoAnswer(for field: Field) -> String {
         switch field {
-        case .work: return "Product Designer"
         case .area: return "Calgary, Vancouver, Toronto"
         default: return ""
         }
@@ -210,6 +287,10 @@ struct InterviewScreen: View {
         apply(q.field, value)
         if !value.isEmpty { messages.append(Msg(text: value, mine: true)) }
         draft = ""
+        advance()
+    }
+
+    private func advance() {
         let nextStep = step + 1
         step = nextStep
         if nextStep < questions.count {
