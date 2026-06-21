@@ -464,8 +464,7 @@ struct ApplySheet: View {
     let item: QueueItem
     @Environment(CarlStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-    @State private var sending = false
+    @State private var showAutofill = false
 
     private var coverNote: String { store.draftEdits[item.matchId] ?? item.draft.coverNote }
 
@@ -507,23 +506,25 @@ struct ApplySheet: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .safeAreaInset(edge: .bottom) {
                 Button {
-                    Task {
-                        sending = true
-                        let url = await store.confirm(item.matchId)
-                        sending = false
-                        if let url, let u = URL(string: url) { openURL(u) }
-                        dismiss()
-                    }
+                    if item.applyUrl != nil { showAutofill = true }
+                    else { Task { await store.confirm(item.matchId); dismiss() } } // no link: just record
                 } label: {
-                    CarlButton(title: sending ? "Opening…" : "Open application & send",
-                               systemIcon: "paperplane.fill",
-                               trailingNote: item.tailored == true ? "· 2 credits" : "· 1 credit")
+                    CarlButton(title: "Open & autofill the application",
+                               systemIcon: "wand.and.stars",
+                               trailingNote: "· you tap Submit")
                 }
                 .buttonStyle(.plain)
-                .disabled(sending)
                 .padding(.horizontal, 20).padding(.vertical, 12)
                 .background(.ultraThinMaterial)
             }
+        }
+        .fullScreenCover(isPresented: $showAutofill) {
+            AutofillApplyView(item: item, onSubmitted: {
+                Task { await store.confirm(item.matchId) }
+                showAutofill = false
+                dismiss()
+            })
+            .environment(store)
         }
     }
 

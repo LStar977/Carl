@@ -171,7 +171,7 @@ route('GET', '/v1/queue', async (ctx) => {
       });
       m.status = 'ready'; m.applicationId = app.id; store.updateMatch(ctx.user.id, m);
     }
-    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, tailored: !!app.tailored });
+    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, tailored: !!app.tailored, applyUrl: m.job.applyUrl || null });
   }
   return { status: 200, body: { credits: balance(ctx.user), items } };
 });

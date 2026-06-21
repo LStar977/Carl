@@ -83,6 +83,7 @@ struct QueueItem: Codable, Identifiable {
     let tier: String
     let draft: Draft
     var tailored: Bool? = nil
+    var applyUrl: String? = nil
     var id: String { matchId }
 }
 struct QueueResponse: Codable { let credits: Int; let items: [QueueItem] }
