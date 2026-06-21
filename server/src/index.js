@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { config, hasLLM, hasATS, hasAdzuna, hasUSAJobs } from './config.js';
-import { store } from './store.js';
+import { store, initStore, flush } from './store.js';
 import { sendJSON, readBody, uid, nowISO } from './util.js';
 import { parseResume, buildResume } from './services/resume.js';
 import { purchaseEntitlement, hasEntitlement } from './services/entitlements.js';
@@ -108,6 +108,7 @@ route('POST', '/v1/resume', async (ctx) => {
 // Buy a one-time entitlement (e.g. the résumé builder, $14.99).
 route('POST', '/v1/entitlements/purchase', async (ctx) => {
   const r = await purchaseEntitlement(ctx.user, ctx.body?.productId, ctx.body?.receipt);
+  if (r.ok) await flush(); // persist the purchase immediately
   return { status: r.ok ? 200 : 400, body: r };
 });
 
@@ -243,6 +244,7 @@ route('GET', '/v1/credits', async (ctx) => ({
 
 route('POST', '/v1/credits/purchase', async (ctx) => {
   const r = await purchase(ctx.user, ctx.body.packId, ctx.body.receipt);
+  if (r.ok) await flush(); // persist the purchase immediately (money is durable)
   return r.ok ? { status: 200, body: r } : { status: 400, body: r };
 });
 
@@ -351,9 +353,17 @@ function corsHeaders() {
 function publicUser(u) { return { id: u.id, name: u.name, email: u.email, phone: u.phone || '', credits: u.credits, entitlements: u.entitlements || [] }; }
 function contactOf(u) { return { name: u.name || '', email: u.email || '', phone: u.phone || '' }; }
 
+// Load any persisted state before accepting traffic.
+await initStore();
+
 server.listen(config.port, () => {
   console.log(`Carl server on :${config.port}  ·  llm=${hasLLM} ats=${hasATS} adzuna=${hasAdzuna} usajobs=${hasUSAJobs} apply=${config.applyMode} ingest=${config.ingestEnabled}`);
   startIngestSchedule();
   startBoardRefreshSchedule();
   startAutoSearchSchedule();
 });
+
+// Persist on graceful shutdown (deploys, restarts).
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, async () => { try { await flush(); } catch { /* best effort */ } process.exit(0); });
+}

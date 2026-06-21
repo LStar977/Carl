@@ -1,0 +1,9 @@
+{
+  "name": "carl",
+  "private": true,
+  "description": "Carl — root entry so the server in server/ runs on a fresh import (Replit etc.).",
+  "scripts": {
+    "start": "cd server && node src/index.js",
+    "postinstall": "cd server && npm install"
+  }
+}

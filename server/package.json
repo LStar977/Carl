@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Carl backend — résumé parsing, job discovery, matching, and the assisted apply engine.",
   "engines": { "node": ">=18" },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",

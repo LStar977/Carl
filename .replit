@@ -1,0 +1,12 @@
+# Replit run + deployment config for the Carl backend (server/).
+# IMPORTANT: deploy as a Reserved VM (always-on) — the app runs in-process
+# background workers (job-board ingestion + daily search) that need the process
+# to stay alive 24/7. Do NOT use Autoscale.
+
+modules = ["nodejs-20"]
+run = "npm start"
+
+[deployment]
+deploymentTarget = "vm"
+build = ["sh", "-c", "npm install"]
+run = ["sh", "-c", "npm start"]
