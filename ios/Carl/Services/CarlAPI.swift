@@ -129,12 +129,13 @@ enum CarlAPIError: Error { case http(Int), decoding, noToken }
 actor CarlAPI {
     static let shared = CarlAPI()
 
-    /// Debug builds talk to the local dev server; Release builds talk to the
-    /// deployed backend. Set the production URL before shipping.
+    /// Both Debug and Release talk to the deployed Replit backend so the app
+    /// works on a real device (which can't reach your Mac's localhost). For
+    /// local backend dev, temporarily point the Debug URL at your machine.
     #if DEBUG
-    var baseURL = URL(string: "http://localhost:8787")!
+    var baseURL = URL(string: "https://carl-server-deployment.replit.app")!
     #else
-    var baseURL = URL(string: "https://api.carl.app")! // TODO: your deployed backend
+    var baseURL = URL(string: "https://carl-server-deployment.replit.app")!
     #endif
     private var token: String?
 
