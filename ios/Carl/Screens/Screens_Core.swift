@@ -88,26 +88,7 @@ struct QueueScreen: View {
                 .refreshable { await store.loadQueue() }
             }
             .overlay(alignment: .bottom) {
-                VStack(spacing: 0) {
-                    if !store.queue.isEmpty {
-                        Button {
-                            if store.credits <= 0 { showPaywall = true }
-                            else { Task { await store.confirmAll() } }
-                        } label: {
-                            CarlButton(title: "Confirm all \(store.queue.count)",
-                                       trailingNote: "· uses \(min(store.queue.count, store.credits)) credits",
-                                       fill: CarlColor.navy, height: 54, glow: false)
-                        }
-                        .buttonStyle(.plain)
-                        .shadow(color: CarlColor.navy.opacity(0.26), radius: 10, y: 10)
-                        .padding(.horizontal, 22).padding(.bottom, 12).padding(.top, 14)
-                        .background(alignment: .bottom) {
-                            LinearGradient(colors: [CarlColor.screenBG.opacity(0), CarlColor.screenBG],
-                                           startPoint: .top, endPoint: .bottom)
-                        }
-                    }
-                    CarlTabBar(selected: selectedTab, queueBadge: store.queue.count)
-                }
+                CarlTabBar(selected: selectedTab, queueBadge: store.queue.count)
             }
         }
         .task { await store.loadQueue() }
@@ -206,12 +187,9 @@ struct QueueScreen: View {
                 }
                 .buttonStyle(.plain)
                 Button {
-                    let cost = item.tailored == true ? 2 : 1
-                    if store.credits < cost { showPaywall = true }
-                    else if item.tier == "A" { Task { await store.confirm(item.matchId) } }
-                    else { applyingItem = item } // assisted: review + open the apply page
+                    applyingItem = item // every apply is reviewed + sent on the real page
                 } label: {
-                    CarlButton(title: item.tier == "A" ? "Confirm & submit" : "Review & send",
+                    CarlButton(title: "Review & apply",
                                trailingNote: item.tailored == true ? "· 2 credits" : "· 1 credit", height: 48, glow: false)
                         .shadow(color: CarlColor.royal.opacity(0.3), radius: 8, y: 8)
                 }
