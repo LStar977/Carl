@@ -45,7 +45,7 @@ struct AutofillApplyView: View {
                 .background(CarlColor.tintFill)
 
                 if let url {
-                    AutofillWebView(url: url, js: Self.autofillJS(store))
+                    AutofillWebView(url: url, js: Self.autofillJS(store, item))
                 } else {
                     Spacer()
                     Text("No application link for this role.").carl(14, .medium).foregroundStyle(CarlColor.textSoft)
@@ -69,18 +69,21 @@ struct AutofillApplyView: View {
 
     /// Build the injected autofill script with the user's details (semantic
     /// field matching — works across most ATS forms without per-site selectors).
-    private static func autofillJS(_ store: CarlStore) -> String {
+    private static func autofillJS(_ store: CarlStore, _ item: QueueItem) -> String {
         let name = store.contact.name
         let parts = name.split(separator: " ").map(String.init)
         let first = parts.first ?? ""
         let last = parts.count > 1 ? parts.dropFirst().joined(separator: " ") : ""
-        let data = "{email:\(js(store.contact.email)),phone:\(js(store.contact.phone))," +
-            "firstName:\(js(first)),lastName:\(js(last)),fullName:\(js(name))}"
+        let city = store.prefs.locations?.first ?? store.prefs.location ?? ""
+        let cover = store.draftEdits[item.matchId] ?? item.draft.coverNote
+        let qa = item.draft.answers.map { "{q:\(js($0.question)),a:\(js($0.answer))}" }.joined(separator: ",")
+        let data = "{email:\(js(store.contact.email)),phone:\(js(store.contact.phone)),"
+            + "firstName:\(js(first)),lastName:\(js(last)),fullName:\(js(name)),"
+            + "city:\(js(city)),linkedin:\(js(store.eligibility.linkedinUrl)),"
+            + "portfolio:\(js(store.eligibility.portfolioUrl)),coverNote:\(js(cover)),qa:[\(qa)]}"
         return """
         (function(){
           var data = \(data);
-          // React/Vue controlled inputs ignore a plain el.value=; use the native
-          // setter then fire input/change so the framework registers the value.
           function nativeSet(el,val){
             if(!el||!val) return;
             try{
@@ -100,6 +103,17 @@ struct AutofillApplyView: View {
             return ((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')+' '+lbl).toLowerCase();
           }
           function has(el,keys){ var h=hay(el); return keys.some(function(k){return h.indexOf(k)>=0;}); }
+          function toks(s){ return (s||'').toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w.length>3;}); }
+          function matchQA(el){
+            if(!data.qa||!data.qa.length) return '';
+            var ht=toks(hay(el)), best='', bestScore=0;
+            data.qa.forEach(function(item){
+              var s=0, qt=toks(item.q);
+              qt.forEach(function(w){ if(ht.indexOf(w)>=0) s++; });
+              if(s>bestScore){ bestScore=s; best=item.a; }
+            });
+            return bestScore>=2 ? best : '';
+          }
           function fillDoc(doc){
             var n=0;
             var els = Array.prototype.slice.call(doc.querySelectorAll('input,textarea'));
@@ -111,6 +125,11 @@ struct AutofillApplyView: View {
               else if(has(el,['last name','lastname','last_name','surname','family'])) { nativeSet(el,data.lastName); n++; }
               else if(has(el,['full name','full_name','your name'])||(el.name||'').toLowerCase()==='name') { nativeSet(el,data.fullName); n++; }
               else if(el.type==='tel'||has(el,['phone','mobile','tel'])) { nativeSet(el,data.phone); n++; }
+              else if(has(el,['linkedin'])) { nativeSet(el,data.linkedin); n++; }
+              else if(has(el,['portfolio','personal site','personal website'])) { nativeSet(el,data.portfolio); n++; }
+              else if(has(el,['city','town'])) { nativeSet(el,data.city); n++; }
+              else if(el.tagName==='TEXTAREA' && has(el,['cover letter','coverletter','cover_letter'])) { nativeSet(el,data.coverNote); n++; }
+              else if(el.tagName==='TEXTAREA') { var a=matchQA(el); if(a){ nativeSet(el,a); n++; } }
             });
             // Reach into same-origin iframes (some ATS embed the form this way).
             var frames = doc.querySelectorAll('iframe');
