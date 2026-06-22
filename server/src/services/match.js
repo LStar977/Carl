@@ -14,8 +14,28 @@ export function scoreMatches(profile, prefs, jobs) {
       const fit = heuristicFit(parsed, wantTitle, job);
       return { ...job, fit, eligible, reasons: reasonsFor(parsed, prefs, job, fit) };
     })
-    .filter((j) => j.eligible && !blocked.has((j.company || '').toLowerCase()))
+    .filter((j) => j.eligible && workAuthEligible(profile, j) && !blocked.has((j.company || '').toLowerCase()))
     .sort((a, b) => b.fit - a.fit);
+}
+
+/**
+ * Keep only jobs the user can actually take given their work authorization.
+ * Drives off the country-aware eligibility toggles: e.g. authorized in Canada
+ * only → keep Canadian roles + worldwide/Canada remote, drop US roles (which
+ * would need sponsorship). No-ops when authorization is unknown or covers both.
+ */
+export function workAuthEligible(profile, job) {
+  const e = profile?.eligibility || {};
+  const ca = e.authorizedCA;
+  const us = e.authorizedUS;
+  if (ca == null && us == null) return true; // legacy / not set → no filter
+  if (ca && us) return true;                  // authorized everywhere → no filter
+  if (!ca && !us) return true;                // can't restrict usefully → no filter
+  const country = String(job.country || '').toUpperCase();
+  if (!country) return true;                  // unknown / worldwide remote → keep
+  if (ca && !us) return country === 'CA';     // Canada-only seeker
+  if (us && !ca) return country === 'US';     // US-only seeker
+  return true;
 }
 
 /** Lowercased set of companies the user never wants Carl to apply to. */

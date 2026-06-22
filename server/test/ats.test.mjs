@@ -108,6 +108,22 @@ ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
 const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
 ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');
 
+// --- Work-authorization steering (Canada-only seeker) -----------------------
+const authJobs = [
+  { id: 'a_ca', title: 'Product Designer', location: 'Toronto, ON', country: 'CA', remoteType: 'onsite', payFloor: 0 },
+  { id: 'a_us', title: 'Product Designer', location: 'Austin, TX', country: 'US', remoteType: 'onsite', payFloor: 0 },
+  { id: 'a_usr', title: 'Product Designer', location: 'Remote - US', country: 'US', remoteType: 'remote', payFloor: 0 },
+  { id: 'a_ww', title: 'Product Designer', location: 'Remote', remoteType: 'remote', payFloor: 0 },
+];
+const caOnly = { eligibility: { authorizedCA: true, authorizedUS: false } };
+const caRes = scoreMatches(caOnly, { titles: ['Product Designer'], locationType: 'any' }, authJobs).map((j) => j.id);
+ok(caRes.includes('a_ca'), 'Canada-only: Canadian role kept');
+ok(!caRes.includes('a_us') && !caRes.includes('a_usr'), 'Canada-only: US roles (incl US-remote) dropped');
+ok(caRes.includes('a_ww'), 'Canada-only: worldwide remote kept');
+const bothAuth = { eligibility: { authorizedCA: true, authorizedUS: true } };
+ok(scoreMatches(bothAuth, { titles: ['Product Designer'], locationType: 'any' }, authJobs).length === 4,
+   'authorized in both: nothing filtered');
+
 // --- Multi-city: open to several cities + remote ----------------------------
 const multiJobs = [
   { id: 'm_yyc', title: 'Product Designer', location: 'Calgary, AB', remoteType: 'onsite', payFloor: 0 },
