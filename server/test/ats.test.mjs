@@ -103,7 +103,7 @@ const torontoOnsite = scoreMatches({}, { titles: ['Product Designer'], location:
 ok(torontoOnsite.some((j) => j.id === 'j1'), 'onsite Toronto kept');
 ok(torontoOnsite.some((j) => j.id === 'j2'), 'GTA alias matches Toronto');
 ok(!torontoOnsite.some((j) => j.id === 'j3'), 'Austin onsite dropped for Toronto seeker');
-ok(torontoOnsite.some((j) => j.id === 'j4'), 'remote-Canada always eligible');
+ok(!torontoOnsite.some((j) => j.id === 'j4'), 'on-site seeker does NOT get remote jobs');
 
 const torontoRemote = scoreMatches({}, { location: 'Toronto', locationType: 'remote' }, cityJobs);
 ok(torontoRemote.length === 1 && torontoRemote[0].id === 'j4', 'remote-only seeker gets only remote');

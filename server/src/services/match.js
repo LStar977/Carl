@@ -119,11 +119,13 @@ function locationEligible(prefs, job) {
   const cities = wantedCities(prefs);
 
   if (job.remoteType === 'remote') {
+    // On-site / hybrid seekers want a specific city — don't show remote roles.
+    if (want === 'onsite' || want === 'hybrid') return false;
     // Optional remote scoping (e.g. "remote in the US"). Only excludes when the
     // job's country is known and not in the allow-list — never over-filters.
     const scope = (prefs?.remoteCountries || []).map((c) => String(c).toUpperCase());
     if (scope.length && job.country) return scope.includes(String(job.country).toUpperCase());
-    return true;                                 // remote is open to any city
+    return true;                                 // 'any'/'remote' → remote is fine
   }
   if (want === 'remote') return false;           // wants remote only → drop onsite
 
