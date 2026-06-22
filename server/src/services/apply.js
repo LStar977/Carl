@@ -27,8 +27,11 @@ export async function draftApplication(profile, job) {
       `skills: ${(parsed.skills || []).join(', ')}.\n` +
       `Job: ${job.title} at ${job.company} (${job.location}).\n` +
       `${job.descriptionSnippet || ''}\n` +
-      `Facts to use truthfully in answers: ${eligibilityFacts(elig)}\n\n` +
-      'Write as the candidate applying to this specific job. ' +
+      `Facts to use truthfully in answers: ${eligibilityFacts(elig, job)}\n\n` +
+      'Write as the candidate applying to this specific job. For any screening ' +
+      'answer (work authorization, sponsorship, etc.) use ONLY these facts, state ' +
+      'them clearly and consistently, and NEVER contradict them or invent caveats ' +
+      'like "in the future". ' +
       'Return JSON {"coverNote": string (2-3 sentences, first person, no salutation), ' +
       '"answers": [{"question": string, "answer": string}] (1-2 items)}',
     maxTokens: 500,
@@ -55,10 +58,30 @@ export async function tailorResume(profile, job) {
 }
 
 /** Summarise the screening answers Carl actually knows, for the draft prompt. */
-function eligibilityFacts(e) {
+// Country-aware: work authorization differs by country (e.g. authorized in
+// Canada, needs sponsorship for US roles). Answers are derived from THIS job's
+// country so they're never self-contradictory.
+function eligibilityFacts(e, job) {
   const f = [];
-  if (e.authorized != null) f.push(`work-authorized: ${e.authorized ? 'yes' : 'no'}`);
-  if (e.needsSponsorship != null) f.push(`needs visa sponsorship: ${e.needsSponsorship ? 'yes' : 'no'}`);
+  const country = String(job?.country || '').toUpperCase(); // 'US' | 'CA' | ''
+  const hasCountryAuth = e.authorizedCA != null || e.authorizedUS != null;
+
+  if (hasCountryAuth) {
+    const auth = [];
+    if (e.authorizedCA) auth.push('Canada');
+    if (e.authorizedUS) auth.push('the United States');
+    f.push(`authorized to work in: ${auth.length ? auth.join(' and ') : 'no country without sponsorship'}`);
+    if (country === 'US') {
+      f.push(`this specific role is US-based; sponsorship needed for it: ${e.authorizedUS ? 'no' : 'yes'}`);
+    } else if (country === 'CA') {
+      f.push(`this specific role is Canada-based; sponsorship needed for it: ${e.authorizedCA ? 'no' : 'yes'}`);
+    }
+    // Unknown/remote country → no per-role sponsorship claim; keep it general.
+  } else {
+    // Legacy single-toggle profiles.
+    if (e.authorized != null) f.push(`work-authorized: ${e.authorized ? 'yes' : 'no'}`);
+    if (e.needsSponsorship != null) f.push(`needs visa sponsorship: ${e.needsSponsorship ? 'yes' : 'no'}`);
+  }
   if (e.willingToRelocate != null) f.push(`willing to relocate: ${e.willingToRelocate ? 'yes' : 'no'}`);
   if (e.salaryExpectation) f.push(`salary expectation: ${e.salaryExpectation}`);
   if (e.noticePeriod) f.push(`notice period: ${e.noticePeriod}`);

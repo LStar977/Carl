@@ -854,16 +854,22 @@ struct EligibilityScreen: View {
                     .padding(.bottom, 18)
 
                 VStack(spacing: 0) {
-                    toggleRow("Authorized to work where I'm applying", $store.eligibility.authorized)
+                    toggleRow("Authorized to work in Canada", $store.eligibility.authorizedCA)
                     Divider().overlay(CarlColor.hairline)
-                    toggleRow("I need visa sponsorship", $store.eligibility.needsSponsorship)
+                    toggleRow("Authorized to work in the U.S.", $store.eligibility.authorizedUS)
                     Divider().overlay(CarlColor.hairline)
                     toggleRow("Open to relocating", $store.eligibility.willingToRelocate)
                 }
                 .padding(.horizontal, 16)
                 .background(CarlColor.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .carlCardShadow(0.06, radius: 18, y: 6)
-                .padding(.bottom, 14)
+
+                Text("If a role is in a country you're not authorized for, Carl will say you'd need sponsorship — never the wrong thing.")
+                    .carl(12.5, .medium).foregroundStyle(CarlColor.textFaint)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4).padding(.top, 8)
+                    .padding(.bottom, 14)
 
                 VStack(spacing: 12) {
                     fieldRow(icon: "dollarsign.circle.fill", placeholder: "Salary expectation (e.g. $130k+)",

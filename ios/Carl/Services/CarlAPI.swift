@@ -10,8 +10,11 @@ struct Contact: Codable, Equatable { var name: String; var email: String; var ph
 
 /// Standard application screening answers Carl fills in on the user's behalf.
 struct Eligibility: Codable, Equatable {
-    var authorized: Bool = true
-    var needsSponsorship: Bool = false
+    // Country-aware work authorization (Carl serves US + Canada).
+    var authorizedCA: Bool = true
+    var authorizedUS: Bool = false
+    var authorized: Bool = true        // legacy (kept for back-compat)
+    var needsSponsorship: Bool = false // legacy
     var willingToRelocate: Bool = false
     var salaryExpectation: String = ""
     var noticePeriod: String = ""
