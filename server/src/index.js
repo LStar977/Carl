@@ -6,7 +6,7 @@ import { parseResume, buildResume } from './services/resume.js';
 import { purchaseEntitlement, hasEntitlement } from './services/entitlements.js';
 import { searchJobs } from './services/jobs.js';
 import { scoreMatches, blockedSet } from './services/match.js';
-import { classifyTier, draftApplication, submitApplication, tailorResume } from './services/apply.js';
+import { classifyTier, draftApplication, templateDraft, submitApplication, tailorResume } from './services/apply.js';
 import { PACKS, balance, consume, purchase } from './services/credits.js';
 import { startIngestSchedule } from './services/ingest.js';
 import { startBoardRefreshSchedule } from './services/board-refresh.js';
@@ -155,25 +155,54 @@ route('POST', '/v1/search/more', async (ctx) => {
 
 route('GET', '/v1/queue', async (ctx) => {
   const matches = store.getMatches(ctx.user.id);
-  const blocked = blockedSet(store.getProfile(ctx.user.id));
-  const ready = matches
+  const profile = store.getProfile(ctx.user.id);
+  const blocked = blockedSet(profile);
+  const eligible = matches
     .filter((m) => m.status === 'suggested' || m.status === 'ready')
-    .filter((m) => !blocked.has((m.job.company || '').toLowerCase()))
-    .slice(0, 14);
+    .filter((m) => !blocked.has((m.job.company || '').toLowerCase()));
+  // Show a healthy batch instantly. We AI-write the cover letter for the FIRST
+  // item (nice preview); the rest get an instant template draft and are
+  // AI-written on demand when the user opens or confirms them — so the queue
+  // loads fast and never appears empty.
+  const ready = eligible.slice(0, 30);
+  const parsed = profile?.resume?.parsed || {};
   const items = [];
-  for (const m of ready) {
+  for (let i = 0; i < ready.length; i++) {
+    const m = ready[i];
     let app = store.getApplications(ctx.user.id).find((a) => a.matchId === m.id);
     if (!app) {
-      const draft = await draftApplication(store.getProfile(ctx.user.id), m.job);
+      const aiNow = i === 0;
+      const draft = aiNow ? await draftApplication(profile, m.job) : templateDraft(parsed, m.job);
       app = store.upsertApplication({
         id: uid('app'), userId: ctx.user.id, matchId: m.id, jobId: m.job.id,
-        tier: classifyTier(m.job), draft, status: 'ready', createdAt: nowISO(), history: [],
+        tier: classifyTier(m.job), draft, aiDrafted: aiNow, status: 'ready', createdAt: nowISO(), history: [],
       });
       m.status = 'ready'; m.applicationId = app.id; store.updateMatch(ctx.user.id, m);
     }
-    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, tailored: !!app.tailored, applyUrl: m.job.applyUrl || null });
+    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, aiDrafted: !!app.aiDrafted, tailored: !!app.tailored, applyUrl: m.job.applyUrl || null });
   }
-  return { status: 200, body: { credits: balance(ctx.user), items } };
+  return { status: 200, body: { credits: balance(ctx.user), items, total: eligible.length } };
+});
+
+// Generate (or return) the real AI-written application for one job — called when
+// the user opens a job to review it, upgrading the instant template draft.
+route('POST', '/v1/applications/:matchId/draft', async (ctx) => {
+  const m = store.getMatch(ctx.user.id, ctx.params.matchId);
+  if (!m) return { status: 404, body: { error: 'match_not_found' } };
+  let app = store.getApplications(ctx.user.id).find((a) => a.matchId === ctx.params.matchId);
+  if (!app || !app.aiDrafted) {
+    const draft = await draftApplication(store.getProfile(ctx.user.id), m.job);
+    if (app) { app.draft = draft; app.aiDrafted = true; }
+    else {
+      app = {
+        id: uid('app'), userId: ctx.user.id, matchId: m.id, jobId: m.job.id,
+        tier: classifyTier(m.job), draft, aiDrafted: true, status: 'ready', createdAt: nowISO(), history: [],
+      };
+    }
+    store.upsertApplication(app);
+    m.status = 'ready'; m.applicationId = app.id; store.updateMatch(ctx.user.id, m);
+  }
+  return { status: 200, body: { draft: app.draft, applicationId: app.id } };
 });
 
 // Tailor the résumé to a specific job (premium — charged +1 credit on submit).
@@ -261,7 +290,12 @@ async function confirmOne(ctx, matchId) {
   let app = store.getApplications(ctx.user.id).find((a) => a.matchId === matchId);
   if (!app) {
     const draft = await draftApplication(store.getProfile(ctx.user.id), m.job);
-    app = store.upsertApplication({ id: uid('app'), userId: ctx.user.id, matchId, jobId: m.job.id, tier: classifyTier(m.job), draft, status: 'ready', createdAt: nowISO(), history: [] });
+    app = store.upsertApplication({ id: uid('app'), userId: ctx.user.id, matchId, jobId: m.job.id, tier: classifyTier(m.job), draft, aiDrafted: true, status: 'ready', createdAt: nowISO(), history: [] });
+  } else if (!app.aiDrafted && !app.tailored) {
+    // Upgrade an instant template draft to the real AI-written one before sending.
+    app.draft = await draftApplication(store.getProfile(ctx.user.id), m.job);
+    app.aiDrafted = true;
+    store.upsertApplication(app);
   }
   if (app.status === 'submitted' || app.status === 'applied') {
     return { status: 200, body: { submitted: true, already: true, credits: balance(ctx.user) } };

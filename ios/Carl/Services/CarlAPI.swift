@@ -87,11 +87,13 @@ struct QueueItem: Codable, Identifiable {
     let avatarColor: String
     let tier: String
     let draft: Draft
+    var aiDrafted: Bool? = nil
     var tailored: Bool? = nil
     var applyUrl: String? = nil
     var id: String { matchId }
 }
-struct QueueResponse: Codable { let credits: Int; let items: [QueueItem] }
+struct QueueResponse: Codable { let credits: Int; let items: [QueueItem]; var total: Int? = nil }
+struct DraftResponse: Codable { let draft: Draft; let applicationId: String? }
 
 struct ConfirmResponse: Codable { let submitted: Bool; let credits: Int?; let mode: String?; let applyUrl: String?; let tier: String? }
 
@@ -237,6 +239,11 @@ actor CarlAPI {
         try await request("GET", "/v1/queue")
     }
 
+    /// Generate (or fetch) the real AI-written application for a job on demand.
+    func draftApplication(matchId: String) async throws -> DraftResponse {
+        try await request("POST", "/v1/applications/\(matchId)/draft")
+    }
+
     /// Generate a résumé tailored to this job (charged +1 credit on submit).
     func tailorResume(matchId: String) async throws {
         struct R: Codable { let tailored: Bool }
@@ -276,6 +283,7 @@ actor CarlAPI {
     private func request<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B?, auth: Bool = true) async throws -> T {
         var req = URLRequest(url: baseURL.appendingPathComponent(path))
         req.httpMethod = method
+        req.timeoutInterval = 120 // AI drafting/tailoring can take a while
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if auth {
             guard let token else { throw CarlAPIError.noToken }

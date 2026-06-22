@@ -47,7 +47,9 @@ struct QueueScreen: View {
                         } else {
                             HStack(spacing: 10) {
                                 CarlMark(eyes: .happy).frame(width: 30, height: 29)
-                                Text("I've prepped \(store.queue.count) applications. Skim them and hit submit — takes 2 minutes.")
+                                Text(store.queueTotal > store.queue.count
+                                     ? "I found \(store.queueTotal) great matches. Here are your top \(store.queue.count) — review these, then tap Find more for the next batch."
+                                     : "I've prepped \(store.queue.count) applications. Skim them and hit submit — takes 2 minutes.")
                                     .carl(13.5, .bold).foregroundStyle(CarlColor.greenDeep)
                                     .fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 0)
@@ -365,23 +367,39 @@ struct DashboardScreen: View {
                         // hero
                         ZStack(alignment: .topTrailing) {
                             VStack(alignment: .leading, spacing: 0) {
-                                Text("Today").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
-                                CountUp(value: Double(appliedShown), prefix: "Carl applied to ", suffix: " jobs")
-                                    .carlFont(40, .heavy).foregroundStyle(.white)
-                                    .padding(.top, 4)
-                                    .padding(.trailing, 60) // clear the mascot in the corner
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .onAppear {
-                                        if let v = store.dashboard?.appliedToday {
+                                if (store.dashboard?.appliedToday ?? 0) == 0 && store.queueTotal > 0 {
+                                    // Nothing applied yet, but matches are waiting — point to the queue.
+                                    Text("Ready for you").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
+                                    CountUp(value: Double(appliedShown), suffix: " great matches")
+                                        .carlFont(40, .heavy).foregroundStyle(.white)
+                                        .padding(.top, 4).padding(.trailing, 60)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .onAppear { withAnimation(.easeOut(duration: 1.3)) { appliedShown = store.queueTotal } }
+                                        .onChange(of: store.queueTotal) { _, v in
                                             withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
                                         }
-                                    }
-                                    .onChange(of: store.dashboard?.appliedToday ?? 0) { _, v in
-                                        withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
-                                    }
-                                Text("Nice work resting while Carl hustled.")
-                                    .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
-                                    .padding(.top, 8)
+                                    Text("Review them in your queue and start applying.")
+                                        .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
+                                        .padding(.top, 8)
+                                } else {
+                                    Text("Today").carl(14, .semibold).foregroundStyle(CarlColor.textOnNavySoft)
+                                    CountUp(value: Double(appliedShown), prefix: "Carl applied to ", suffix: " jobs")
+                                        .carlFont(40, .heavy).foregroundStyle(.white)
+                                        .padding(.top, 4)
+                                        .padding(.trailing, 60) // clear the mascot in the corner
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .onAppear {
+                                            if let v = store.dashboard?.appliedToday {
+                                                withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
+                                            }
+                                        }
+                                        .onChange(of: store.dashboard?.appliedToday ?? 0) { _, v in
+                                            withAnimation(.easeOut(duration: 1.3)) { appliedShown = v }
+                                        }
+                                    Text("Nice work resting while Carl hustled.")
+                                        .carl(13.5, .medium).foregroundStyle(CarlColor.textOnNavySoft)
+                                        .padding(.top, 8)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             CarlAvatar(eyes: .happy, showSparkle: true).frame(width: 62, height: 59)
@@ -431,7 +449,7 @@ struct DashboardScreen: View {
             }
             .overlay(alignment: .bottom) { CarlTabBar(selected: selectedTab, queueBadge: store.queue.count) }
         }
-        .task { await store.loadDashboard(); await store.loadProfile() }
+        .task { await store.loadDashboard(); await store.loadProfile(); await store.loadQueue() }
     }
 
     private func statCard(_ value: String, _ label: String, _ color: Color) -> some View {
@@ -465,8 +483,11 @@ struct ApplySheet: View {
     @Environment(CarlStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showAutofill = false
+    @State private var resolvedDraft: Draft?
+    @State private var draftingNow = false
 
-    private var coverNote: String { store.draftEdits[item.matchId] ?? item.draft.coverNote }
+    private var draft: Draft { resolvedDraft ?? item.draft }
+    private var coverNote: String { store.draftEdits[item.matchId] ?? draft.coverNote }
 
     var body: some View {
         NavigationStack {
@@ -493,8 +514,15 @@ struct ApplySheet: View {
                     if item.tailored == true {
                         materialCard("Résumé", "A résumé tailored to this role is ready on your profile.", copyable: false)
                     }
+                    if draftingNow {
+                        HStack(spacing: 9) {
+                            SpinnerRing(size: 15)
+                            Text("Carl is writing your application…").carl(13, .semibold).foregroundStyle(CarlColor.textSoft)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     materialCard("Cover note", coverNote)
-                    ForEach(Array(item.draft.answers.enumerated()), id: \.offset) { _, qa in
+                    ForEach(Array(draft.answers.enumerated()), id: \.offset) { _, qa in
                         materialCard(qa.question, qa.answer)
                     }
                 }
@@ -504,6 +532,19 @@ struct ApplySheet: View {
             .navigationTitle("Send application")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .task {
+                // If this job only has the instant template draft, fetch the
+                // real AI-written one so the user reviews/copies the right text.
+                if item.aiDrafted != true, resolvedDraft == nil {
+                    draftingNow = true
+                    if let d = await store.ensureDraft(item.matchId) {
+                        resolvedDraft = d
+                        // So the autofill copy + the recorded send use the real text.
+                        if store.draftEdits[item.matchId] == nil { store.draftEdits[item.matchId] = d.coverNote }
+                    }
+                    draftingNow = false
+                }
+            }
             .safeAreaInset(edge: .bottom) {
                 Button {
                     if item.applyUrl != nil { showAutofill = true }

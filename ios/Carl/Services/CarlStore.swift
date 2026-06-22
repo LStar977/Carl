@@ -11,6 +11,7 @@ final class CarlStore {
     var parsed: ParsedResume?
     var search: SearchResponse?
     var queue: [QueueItem] = []
+    var queueTotal = 0   // total eligible matches found (queue shows a batch)
     var dashboard: DashboardResponse?
     var busy = false
 
@@ -236,8 +237,19 @@ final class CarlStore {
     func loadQueue() async {
         if demo { return }
         loadingQueue = true
-        if let q = try? await api.queue() { queue = q.items; credits = q.credits }
+        if let q = try? await api.queue() {
+            queue = q.items
+            credits = q.credits
+            queueTotal = q.total ?? q.items.count
+        }
         loadingQueue = false
+    }
+
+    /// Fetch the real AI-written application for a job (upgrades the instant
+    /// template draft shown in the list). Returns the cover note + answers.
+    func ensureDraft(_ matchId: String) async -> Draft? {
+        if demo { return queue.first(where: { $0.matchId == matchId })?.draft }
+        return try? await api.draftApplication(matchId: matchId).draft
     }
 
     /// Per-application edits to the cover note, keyed by matchId (applied on send).

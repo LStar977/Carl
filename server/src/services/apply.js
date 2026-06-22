@@ -88,7 +88,7 @@ function eligibilityFacts(e, job) {
   return f.length ? f.join(', ') : 'none provided';
 }
 
-function templateDraft(parsed, job) {
+export function templateDraft(parsed, job) {
   return {
     coverNote:
       `${job.company}'s work is exactly where I do my best. Over ${parsed.years || 6} years as a ` +
