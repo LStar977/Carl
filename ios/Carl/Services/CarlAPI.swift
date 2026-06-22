@@ -89,6 +89,7 @@ struct QueueItem: Codable, Identifiable {
     let draft: Draft
     var aiDrafted: Bool? = nil
     var tailored: Bool? = nil
+    var tailoredResume: String? = nil
     var applyUrl: String? = nil
     var id: String { matchId }
 }
@@ -245,9 +246,12 @@ actor CarlAPI {
     }
 
     /// Generate a résumé tailored to this job (charged +1 credit on submit).
-    func tailorResume(matchId: String) async throws {
-        struct R: Codable { let tailored: Bool }
-        let _: R = try await request("POST", "/v1/applications/\(matchId)/tailor-resume")
+    /// Returns the tailored résumé text so the user can review it before sending.
+    @discardableResult
+    func tailorResume(matchId: String) async throws -> String? {
+        struct R: Codable { let tailored: Bool; let resume: String? }
+        let r: R = try await request("POST", "/v1/applications/\(matchId)/tailor-resume")
+        return r.resume
     }
 
     func confirm(matchId: String, coverNote: String? = nil) async throws -> ConfirmResponse {

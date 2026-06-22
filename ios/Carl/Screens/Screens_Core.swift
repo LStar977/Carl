@@ -512,7 +512,13 @@ struct ApplySheet: View {
                     .background(CarlColor.greenBG, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
 
                     if item.tailored == true {
-                        materialCard("Résumé", "A résumé tailored to this role is ready on your profile.", copyable: false)
+                        if let r = item.tailoredResume, !r.isEmpty {
+                            materialCard("Résumé — tailored to this role", r)
+                        } else {
+                            materialCard("Résumé — tailored to this role",
+                                         "Your tailored résumé is ready and will be used for this application.",
+                                         copyable: false)
+                        }
                     }
                     if draftingNow {
                         HStack(spacing: 9) {

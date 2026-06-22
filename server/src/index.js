@@ -179,7 +179,7 @@ route('GET', '/v1/queue', async (ctx) => {
       });
       m.status = 'ready'; m.applicationId = app.id; store.updateMatch(ctx.user.id, m);
     }
-    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, aiDrafted: !!app.aiDrafted, tailored: !!app.tailored, applyUrl: m.job.applyUrl || null });
+    items.push({ ...matchDTO(m), applicationId: app.id, draft: app.draft, aiDrafted: !!app.aiDrafted, tailored: !!app.tailored, tailoredResume: app.tailored ? app.tailoredResume : null, applyUrl: m.job.applyUrl || null });
   }
   return { status: 200, body: { credits: balance(ctx.user), items, total: eligible.length } };
 });
@@ -221,7 +221,7 @@ route('POST', '/v1/applications/:matchId/tailor-resume', async (ctx) => {
     app.tailored = true;
   }
   store.upsertApplication(app);
-  return { status: 200, body: { tailored: !!app.tailored } };
+  return { status: 200, body: { tailored: !!app.tailored, resume: app.tailored ? app.tailoredResume : null } };
 });
 
 route('POST', '/v1/applications/:matchId/confirm', async (ctx) => {

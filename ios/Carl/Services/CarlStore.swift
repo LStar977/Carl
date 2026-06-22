@@ -265,8 +265,12 @@ final class CarlStore {
             return
         }
         tailoring.insert(matchId)
-        try? await api.tailorResume(matchId: matchId)
+        let resume = try? await api.tailorResume(matchId: matchId)
         await loadQueue()
+        // Keep the tailored text on the item so the user can review it pre-send.
+        if let resume, let i = queue.firstIndex(where: { $0.matchId == matchId }) {
+            queue[i].tailoredResume = resume
+        }
         tailoring.remove(matchId)
         Haptics.success()
     }
