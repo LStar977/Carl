@@ -23,7 +23,7 @@ struct AutofillApplyView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 9) {
                         CarlMark(eyes: .happy).frame(width: 24, height: 23)
-                        Text("I filled your name, email & phone. Paste your cover note for the rest, then tap the page's Submit.")
+                        Text("Carl tries to fill your name, email & phone — double-check them, paste your cover note, then tap the page's Submit.")
                             .carl(12.5, .semibold).foregroundStyle(CarlColor.navy)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -79,21 +79,47 @@ struct AutofillApplyView: View {
         return """
         (function(){
           var data = \(data);
-          function set(el,val){ if(!el||!val) return;
-            try{ el.focus(); el.value=val;
+          // React/Vue controlled inputs ignore a plain el.value=; use the native
+          // setter then fire input/change so the framework registers the value.
+          function nativeSet(el,val){
+            if(!el||!val) return;
+            try{
+              var proto = el.tagName==='TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+              var setter = Object.getOwnPropertyDescriptor(proto,'value').set;
+              setter.call(el,val);
+            }catch(e){ try{ el.value=val; }catch(_){} }
+            try{
               el.dispatchEvent(new Event('input',{bubbles:true}));
-              el.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){} }
-          function hay(el){ return ((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')).toLowerCase(); }
+              el.dispatchEvent(new Event('change',{bubbles:true}));
+              el.dispatchEvent(new Event('blur',{bubbles:true}));
+            }catch(e){}
+          }
+          function hay(el){
+            var lbl='';
+            try{ if(el.labels&&el.labels.length){ lbl=el.labels[0].innerText||el.labels[0].textContent||''; } }catch(e){}
+            return ((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')+' '+lbl).toLowerCase();
+          }
           function has(el,keys){ var h=hay(el); return keys.some(function(k){return h.indexOf(k)>=0;}); }
-          var els = Array.prototype.slice.call(document.querySelectorAll('input,textarea'));
-          els.forEach(function(el){
-            if(el.type==='hidden'||el.disabled||el.readOnly) return;
-            if(el.type==='email'||has(el,['email','e-mail'])) set(el,data.email);
-            else if(has(el,['first name','firstname','first_name','given'])) set(el,data.firstName);
-            else if(has(el,['last name','lastname','last_name','surname','family'])) set(el,data.lastName);
-            else if(has(el,['full name','full_name','your name'])||(el.name||'').toLowerCase()==='name') set(el,data.fullName);
-            else if(el.type==='tel'||has(el,['phone','mobile','tel'])) set(el,data.phone);
-          });
+          function fillDoc(doc){
+            var n=0;
+            var els = Array.prototype.slice.call(doc.querySelectorAll('input,textarea'));
+            els.forEach(function(el){
+              if(el.type==='hidden'||el.disabled||el.readOnly) return;
+              if(el.value) return; // don't clobber anything already there
+              if(el.type==='email'||has(el,['email','e-mail'])) { nativeSet(el,data.email); n++; }
+              else if(has(el,['first name','firstname','first_name','given'])) { nativeSet(el,data.firstName); n++; }
+              else if(has(el,['last name','lastname','last_name','surname','family'])) { nativeSet(el,data.lastName); n++; }
+              else if(has(el,['full name','full_name','your name'])||(el.name||'').toLowerCase()==='name') { nativeSet(el,data.fullName); n++; }
+              else if(el.type==='tel'||has(el,['phone','mobile','tel'])) { nativeSet(el,data.phone); n++; }
+            });
+            // Reach into same-origin iframes (some ATS embed the form this way).
+            var frames = doc.querySelectorAll('iframe');
+            for(var i=0;i<frames.length;i++){ try{ var d=frames[i].contentDocument; if(d) n+=fillDoc(d); }catch(e){} }
+            return n;
+          }
+          // Forms often render after load; poll for a few seconds.
+          var tries=0;
+          var iv=setInterval(function(){ tries++; fillDoc(document); if(tries>=15) clearInterval(iv); },400);
         })();
         """
     }
